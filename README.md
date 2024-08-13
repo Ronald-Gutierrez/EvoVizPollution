@@ -1,5 +1,6 @@
 
 # EvoVizPollution
+El proyecto aun esta en desarrollo, pero se puede vizualizar en: https://ronald-gutierrez.github.io/EvoVizPollution/
 
 **EvoVizPollution** es una herramienta interactiva para visualizar y analizar patrones evolutivos de contaminación del aire junto con efectos meteorológicos. Esta aplicación permite explorar datos de calidad del aire de manera intuitiva y efectiva, facilitando la identificación de tendencias y patrones en la contaminación a lo largo del tiempo. Utiliza HTML, CSS y JavaScript para proporcionar una experiencia de usuario interactiva y atractiva.
 
