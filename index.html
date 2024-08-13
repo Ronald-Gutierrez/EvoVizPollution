@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización AQI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/material-ui/5.2.5/material-ui.min.css">
+    <link rel="stylesheet" href="static/styles.css">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @font-face {
+            font-family: 'Fornite';
+            src: url('fonts/fortnite.otf') format('opentype');
+        }
+        .options-container {
+            display: block;
+        }
+        .options-container.hidden {
+            display: none;
+        }
+        .toggle-button {
+            cursor: pointer;
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div>
+                <span class="toggle-button"><i class="fas fa-eye"></i></span>
+                <label for="titulo_vis">Options</label>
+            </div>
+            <div class="options-container">
+                <div>
+                    <label for="stationId">Seleccionar Station ID:</label>
+                    <select id="stationId" class="MuiSelect-root"></select>
+                </div>
+                <div>
+                    <label>Seleccionar Contaminante:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="contaminant" value="PM2_5"> PM2.5</label>
+                        <label><input type="radio" name="contaminant" value="PM10"> PM10</label>
+                        <label><input type="radio" name="contaminant" value="NO2"> NO2</label>
+                        <label><input type="radio" name="contaminant" value="CO"> CO</label>
+                        <label><input type="radio" name="contaminant" value="O3"> O3</label>
+                        <label><input type="radio" name="contaminant" value="SO2"> SO2</label>
+                    </div>
+                </div>
+                <div>
+                    <label for="dateRange">Seleccionar Rango de Fechas:</label>
+                    <input type="date" id="startDate" class="MuiTextField-root">
+                    <input type="date" id="endDate" class="MuiTextField-root">
+                </div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <div class="chart-header">
+                <h2>Gráfico de Relación de Patrones</h2> <!-- Título de la ventana -->
+            </div>
+            <div id="tooltip" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
+            <div id="chart" class="chart"></div>
+        </div>
+    </div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/material-ui/5.2.5/material-ui.min.js"></script>
+    <script src="static/script.js"></script>
+    <script>
+        document.querySelector('.toggle-button').addEventListener('click', function() {
+            const optionsContainer = document.querySelector('.options-container');
+            optionsContainer.classList.toggle('hidden');
+            const icon = this.querySelector('i');
+            if (optionsContainer.classList.contains('hidden')) {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    </script>
+</body>
+</html>

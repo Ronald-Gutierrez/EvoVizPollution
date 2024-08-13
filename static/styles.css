@@ -1,0 +1,108 @@
+/* Cargar la fuente desde la carpeta fonts */
+
+
+/* Usar la fuente en el cuerpo del documento */
+body {
+    font-family: 'Fornite', sans-serif;
+    font-weight: 100; /* Cambia el peso de la fuente a más delgada */
+    background-color: #f0f0f0;
+    color: #525151;
+    margin: 0;
+    padding: 0;
+}
+
+h1, label {
+    font-size: 1.5em;
+}
+
+p {
+    font-size: 0.2em;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 300px;
+    padding: 20px;
+    border-right: 2px solid #ddd;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.MuiSelect-root{
+    margin-bottom: 12px;
+}
+.radio-group {
+    display: flex;
+    flex-wrap: wrap; /* Permite que los elementos se ajusten si no caben en una sola línea */
+    gap: 20px; /* Espacio entre los elementos */
+    margin-bottom: 10px;
+}
+
+.radio-group label {
+    font-size: 1.2em; /* Tamaño de fuente más pequeño */
+    margin-right: 15px; /* Espacio a la derecha de cada etiqueta */
+    
+}
+
+.radio-group input[type="radio"] {
+    margin-right: 10px; /* Espacio entre el radio button y la etiqueta */
+}
+
+
+
+.chart-container {
+    position: absolute; /* Posiciona el contenedor de manera absoluta */
+    top: 20px; /* Espaciado desde el borde superior */
+    left: 400px; /* Espaciado desde el borde izquierdo */
+    width: 30vw; /* Ancho de la ventana de visualización */
+    height: 50vh; /* Alto de la ventana de visualización */
+    border: 1px solid #ccc; /* Borde de la ventana */
+    border-radius: 10px; /* Bordes redondeados */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra de la ventana */
+    background-color: #f9f9f9; /* Fondo del contenedor */
+    overflow: hidden; /* Oculta el contenido desbordado */
+    display: flex;
+    flex-direction: column; /* Coloca el título encima del gráfico */
+    z-index: 1; /* Asegura que el contenedor esté sobre otros elementos */
+}
+.chart-header {
+    background-color: #d3cfcf; /* Fondo del encabezado */
+    color: #000000; /* Color del texto del encabezado */
+    padding: 1px; /* Espaciado dentro del encabezado */
+    border-bottom: 1px solid #ffffff; /* Línea divisoria debajo del encabezado */
+    text-align: center; /* Centra el texto del encabezado */
+}
+
+.chart-container .chart {
+    flex: 1; /* Permite que el gráfico ocupe el espacio restante */
+    padding: 20px; /* Espaciado interno del gráfico */
+    background-color: #f9f9f9; /* Fondo del área del gráfico */
+}
+
+.chart {
+    width: 100%;
+    height: 100%;
+}
+
+select, input[type="date"] {
+    margin-right: 10px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    padding: 5px;
+}
+
+.MuiFormControl-root {
+    margin-right: 10px;
+    width: 100%;
+}
+
+.MuiTextField-root {
+    margin-right: 10px;
+}
