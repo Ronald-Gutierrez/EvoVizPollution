@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="static/styles.css">
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.min.js"></script> <!-- Incluir math.js -->
+
     <style>
         @font-face {
             font-family: 'Fornite';
@@ -58,15 +60,32 @@
         </div>
         <div class="chart-container">
             <div class="chart-header">
-                <h2>Gráfico de Relación de Patrones</h2> <!-- Título de la ventana -->
+                <h2>Relación de Patrones</h2> <!-- Título de la ventana -->
             </div>
             <div id="tooltip" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
             <div id="chart" class="chart"></div>
         </div>
+        <div class="chart-container-radial">
+            <div class="chart-header-radial">
+                <h2>Correlación Jerárquica Radial</h2>
+            </div>
+            <div id="tooltip" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
+            <div id="chart" class="chart"></div>
+            <div id="hierarchical-chart"></div> <!-- Div para el gráfico jerárquico -->
+        </div>
+        <div class="chart-container-pca">
+            <div class="chart-header-pca">
+                <h2>Evolución Espacial</h2>
+            </div>
+            <div id="tooltip-pca" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
+            <div id="pca-chart" class="chart"></div> <!-- Div para el gráfico PCA -->
+        </div>
+        
     </div>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/material-ui/5.2.5/material-ui.min.js"></script>
     <script src="static/script.js"></script>
+
     <script>
         document.querySelector('.toggle-button').addEventListener('click', function() {
             const optionsContainer = document.querySelector('.options-container');

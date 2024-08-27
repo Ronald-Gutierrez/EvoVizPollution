@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', () => {
     const stationIdSelect = document.getElementById('stationId');
     const contaminantRadios = document.querySelectorAll('input[name="contaminant"]');
@@ -5,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const endDateInput = document.getElementById('endDate');
     const chartDiv = d3.select('#chart');
     const tooltip = d3.select('#tooltip');
+    const pcaChartDiv = d3.select('#pca-chart');
+    const tooltipPCA = d3.select('#tooltip-pca');
 
     // Define colores para los niveles de AQI
     const aqiColors = {
@@ -13,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         3: '#FF7E00', // Insalubre para grupos sensibles (101-150)
         4: '#FF0000', // Insalubres (151-200)
         5: '#800080', // Muy insalubre (201-300)
-        6: '#800000'  // Hazardous (301 en adelante)
+        6: '#800000'  // Peligroso (301 en adelante)
     };
 
     // Función para eliminar el sufijo '_aq'
@@ -24,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return text;
     }
 
-    // Carga el CSV y prepara los datos
+    // Carga el CSV y prepara los datos para el gráfico de AQI
     d3.csv('data/daily_aqi_output.csv').then(data => {
         const dates = data.map(d => new Date(d.date));
         const minDate = d3.min(dates);
@@ -192,23 +195,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             function mouseover(event, d) {
                 const [x, y] = d3.pointer(event, svg.node());
-            
+
                 tooltip.style('display', 'block')
                     .html(`Fecha: ${d.formattedDate}<br>AQI: ${d.aqi}`)
                     .style('left', `${x + 5}px`)
                     .style('top', `${y - 28}px`);
-                
+
             }
-            
+
             function mousemove(event) {
                 const [x, y] = d3.pointer(event, svg.node());
-            
+                d3.select(this).transition().attr('r', 10); // Aumenta el radio al pasar el mouse
+
                 tooltip.style('left', `${x + 5}px`)
                     .style('top', `${y - 28}px`);
             }
-            
+
             function mouseout() {
                 tooltip.style('display', 'none');
+                d3.select(this).transition().attr('r', 6); // Aumenta el radio al pasar el mouse
+
             }
 
             function clicked(event, d) {
@@ -222,4 +228,199 @@ document.addEventListener('DOMContentLoaded', () => {
         // Inicializa el gráfico
         updateChart();
     });
+
+    
+
+    // Carga el CSV y prepara los datos para el gráfico PCA
+    d3.csv('data/PCA_VIZ_AQI.csv').then(pcaData => {
+        const aqiColors = {
+            1: '#00E400', // Bueno (0-50)
+            2: '#FFFF00', // Moderado (51-100)
+            3: '#FF7E00', // Insalubre para grupos sensibles (101-150)
+            4: '#FF0000', // Insalubres (151-200)
+            5: '#800080', // Muy insalubre (201-300)
+            6: '#800000'  // Peligroso (301 en adelante)
+        };
+        // Calcula la matriz de correlación
+
+        
+        
+        function updatePCAChart() {
+            const stationId = stationIdSelect.value;
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+    
+            const filteredData = pcaData.filter(d => {
+                const date = new Date(d.date);
+                return d.stationId === stationId && date >= startDate && date <= endDate;
+            });
+    
+            // Limpia el gráfico anterior
+            pcaChartDiv.selectAll('*').remove();
+    
+            const width = 600; // Ancho fijo
+            const height = 400; // Alto fijo
+    
+            const svg = pcaChartDiv.append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .call(d3.zoom().on('zoom', (event) => {
+                    g.attr('transform', event.transform);
+                }));
+    
+            const g = svg.append('g'); // Contenedor para aplicar el zoom y el pan
+    
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(filteredData, d => +d.PC1))
+                .range([50, width - 50]);
+    
+            const yScale = d3.scaleLinear()
+                .domain(d3.extent(filteredData, d => +d.PC2))
+                .range([height - 50, 50]);
+    
+            // Añadir puntos
+            g.selectAll('circle')
+            .data(filteredData)
+            .enter().append('circle')
+            .attr('cx', d => xScale(+d.PC1))
+            .attr('cy', d => yScale(+d.PC2))
+            .attr('r', 6)
+            .attr('fill', d => aqiColors[d.AQI]) // Asigna el color basado en el valor de AQI
+            .on('mouseover', function(event, d) {
+                const [x, y] = d3.pointer(event, svg.node());
+
+                tooltipPCA.style('display', 'block')
+                    .html(`Fecha: ${d.date}<br>AQI: ${d.AQI}<br>PC1: ${d.PC1}<br>PC2: ${d.PC2}`)
+                    .style('left', `${x + 5}px`)
+                    .style('top', `${y - 28}px`);
+            })
+            .on('mousemove', function(event) {
+                const [x, y] = d3.pointer(event, svg.node());
+                d3.select(this).transition().attr('r', 10); // Aumenta el radio al pasar el mouse
+
+                tooltipPCA.style('left', `${x + 5}px`)
+                    .style('top', `${y - 28}px`);
+            })
+            .on('mouseout', function() {
+                tooltipPCA.style('display', 'none');
+                d3.select(this).transition().attr('r', 6); // Aumenta el radio al pasar el mouse
+
+            })
+            // Evento de clic en el gráfico PCA
+            .on('click', function(event, d) {
+                console.log(`Fecha: ${d.date}, Hora: ${d.time}, PC1: ${d.PC1}, PC2: ${d.PC2}, AQI: ${d.AQI}, Station ID: ${d.stationId}`);
+                drawHierarchicalChart(d.date, d.stationId, d.time); // Llama a la función para dibujar el dendograma
+            });
+
+
+        }
+
+
+        //MATRIZ DE CORRELACION
+        function drawHierarchicalChart(date, stationId, time) {
+            d3.csv('data/beijing_17_18_aq.csv').then(data => {
+                // Filtrar los datos por fecha y stationId
+                const filteredData = data.filter(d => d.date === date && d.stationId === stationId);
+
+                // Extraer los atributos relevantes
+                const attributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
+                const matrix = [];
+
+                // Crear la matriz de datos
+                filteredData.forEach(row => {
+                    const rowData = attributes.map(attr => parseFloat(row[attr]) || 0); // Convertir a número
+                    matrix.push(rowData);
+                });
+
+                // Calcular la matriz de correlación
+                const correlationMatrix = calculateCorrelationMatrix(matrix);
+                // drawDendrogram(correlationMatrix, attributes);
+
+                // Aquí puedes llamar a la función para dibujar el dendrograma usando la matriz de correlación
+                console.log(correlationMatrix); // Muestra la matriz de correlación en la consola
+                // drawDendrogram(correlationMatrix); // Llama a la función para dibujar el dendrograma
+            }).catch(error => {
+                console.error('Error al cargar el CSV:', error);
+            });
+        }
+        function drawDendrogram(correlationMatrix, attributes) {
+                    const width = 600;
+                    const height = 400;
+
+                    const svg = d3.select('#hierarchical-chart')
+                        .append('svg')
+                        .attr('width', width)
+                        .attr('height', height);
+
+                    const root = d3.hierarchy({ children: correlationMatrix.map((row, i) => ({ name: attributes[i], value: row })) });
+
+                    const cluster = d3.cluster()
+                        .size([height, width - 160]);
+
+                    cluster(root);
+
+                    const link = svg.selectAll('.link')
+                        .data(root.links())
+                        .enter().append('path')
+                        .attr('class', 'link')
+                        .attr('d', d3.linkHorizontal()
+                            .x(d => d.y)
+                            .y(d => d.x));
+
+                    const node = svg.selectAll('.node')
+                        .data(root.descendants())
+                        .enter().append('g')
+                        .attr('class', d => `node${d.children ? ' node--internal' : ' node--leaf'}`)
+                        .attr('transform', d => `translate(${d.y},${d.x})`);
+
+                    node.append('circle')
+                        .attr('r', 4);
+
+                    node.append('text')
+                        .attr('dy', 3)
+                        .attr('x', d => d.children ? -8 : 8)
+                        .style('text-anchor', d => d.children ? 'end' : 'start')
+                        .text(d => d.data.name);
+                }
+        function calculateCorrelationMatrix(data) {
+            const numAttributes = data[0].length;
+            const correlationMatrix = Array.from({ length: numAttributes }, () => Array(numAttributes).fill(0));
+
+            for (let i = 0; i < numAttributes; i++) {
+                for (let j = 0; j < numAttributes; j++) {
+                    correlationMatrix[i][j] = calculateCorrelation(data.map(row => row[i]), data.map(row => row[j]));
+                }
+            }
+
+            return correlationMatrix;
+        }
+
+        function calculateCorrelation(x, y) {
+            const n = x.length;
+            const sumX = x.reduce((a, b) => a + b, 0);
+            const sumY = y.reduce((a, b) => a + b, 0);
+            const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+            const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+            const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
+
+            const numerator = n * sumXY - sumX * sumY;
+            const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+
+            return denominator === 0 ? 0 : numerator / denominator; // Evitar división por cero
+        }
+
+        // Añadir eventos de cambio para actualizar el gráfico PCA
+        function setupEventListenersForPCA() {
+            stationIdSelect.addEventListener('change', updatePCAChart);
+            startDateInput.addEventListener('change', updatePCAChart);
+            endDateInput.addEventListener('change', updatePCAChart);
+        }
+    
+        // Configura los eventos de cambio
+        setupEventListenersForPCA();
+    
+        // Inicializa el gráfico PCA
+        updatePCAChart();
+    });
+    
 });
