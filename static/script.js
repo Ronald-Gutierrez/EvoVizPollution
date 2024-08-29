@@ -204,17 +204,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function mousemove(event) {
+                d3.select(this).transition().attr('r', 10) // Aumenta el radio al pasar el mouse
+                    .style('stroke', 'red') // Establece el color del borde como rojo
+                    .style('stroke-width', '2px'); // Establece el ancho del borde
                 const [x, y] = d3.pointer(event, svg.node());
-                d3.select(this).transition().attr('r', 10); // Aumenta el radio al pasar el mouse
 
                 tooltip.style('left', `${x + 5}px`)
                     .style('top', `${y - 28}px`);
             }
 
             function mouseout() {
+                d3.select(this).transition()
+                    .attr('r', 6) // Regresa el radio a su tamaño original
+                    .style('stroke', 'none'); // Elimina el borde
                 tooltip.style('display', 'none');
-                d3.select(this).transition().attr('r', 6); // Aumenta el radio al pasar el mouse
-
             }
 
             function clicked(event, d) {
@@ -296,14 +299,17 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .on('mousemove', function(event) {
                 const [x, y] = d3.pointer(event, svg.node());
-                d3.select(this).transition().attr('r', 10); // Aumenta el radio al pasar el mouse
-
+                d3.select(this).transition().attr('r', 10) // Aumenta el radio al pasar el mouse
+                    .style('stroke', 'red') // Establece el color del borde como rojo
+                    .style('stroke-width', '2px'); // Establece el ancho del borde
                 tooltipPCA.style('left', `${x + 5}px`)
                     .style('top', `${y - 28}px`);
             })
             .on('mouseout', function() {
                 tooltipPCA.style('display', 'none');
-                d3.select(this).transition().attr('r', 6); // Aumenta el radio al pasar el mouse
+                d3.select(this).transition().attr('r', 6) // Aumenta el radio al pasar el mouse
+                    .style('stroke', 'none'); // Elimina el borde
+
 
             })
             // Evento de clic en el gráfico PCA
@@ -334,6 +340,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Calcular la matriz de correlación
                 const correlationMatrix = calculateCorrelationMatrix(matrix);
+                        // Calcular la matriz de distancias
+                const distanceMatrix = calculateDistanceMatrix(correlationMatrix);
+                console.log("Matriz de distancias:", distanceMatrix); // Muestra la matriz de distancias en la consola
+
                 // drawDendrogram(correlationMatrix, attributes);
 
                 // Aquí puedes llamar a la función para dibujar el dendrograma usando la matriz de correlación
@@ -343,45 +353,57 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Error al cargar el CSV:', error);
             });
         }
-        function drawDendrogram(correlationMatrix, attributes) {
-                    const width = 600;
-                    const height = 400;
+        // function drawDendrogram(correlationMatrix, attributes) {
+        //             const width = 600;
+        //             const height = 400;
 
-                    const svg = d3.select('#hierarchical-chart')
-                        .append('svg')
-                        .attr('width', width)
-                        .attr('height', height);
+        //             const svg = d3.select('#hierarchical-chart')
+        //                 .append('svg')
+        //                 .attr('width', width)
+        //                 .attr('height', height);
 
-                    const root = d3.hierarchy({ children: correlationMatrix.map((row, i) => ({ name: attributes[i], value: row })) });
+        //             const root = d3.hierarchy({ children: correlationMatrix.map((row, i) => ({ name: attributes[i], value: row })) });
 
-                    const cluster = d3.cluster()
-                        .size([height, width - 160]);
+        //             const cluster = d3.cluster()
+        //                 .size([height, width - 160]);
 
-                    cluster(root);
+        //             cluster(root);
 
-                    const link = svg.selectAll('.link')
-                        .data(root.links())
-                        .enter().append('path')
-                        .attr('class', 'link')
-                        .attr('d', d3.linkHorizontal()
-                            .x(d => d.y)
-                            .y(d => d.x));
+        //             const link = svg.selectAll('.link')
+        //                 .data(root.links())
+        //                 .enter().append('path')
+        //                 .attr('class', 'link')
+        //                 .attr('d', d3.linkHorizontal()
+        //                     .x(d => d.y)
+        //                     .y(d => d.x));
 
-                    const node = svg.selectAll('.node')
-                        .data(root.descendants())
-                        .enter().append('g')
-                        .attr('class', d => `node${d.children ? ' node--internal' : ' node--leaf'}`)
-                        .attr('transform', d => `translate(${d.y},${d.x})`);
+        //             const node = svg.selectAll('.node')
+        //                 .data(root.descendants())
+        //                 .enter().append('g')
+        //                 .attr('class', d => `node${d.children ? ' node--internal' : ' node--leaf'}`)
+        //                 .attr('transform', d => `translate(${d.y},${d.x})`);
 
-                    node.append('circle')
-                        .attr('r', 4);
+        //             node.append('circle')
+        //                 .attr('r', 4);
 
-                    node.append('text')
-                        .attr('dy', 3)
-                        .attr('x', d => d.children ? -8 : 8)
-                        .style('text-anchor', d => d.children ? 'end' : 'start')
-                        .text(d => d.data.name);
+        //             node.append('text')
+        //                 .attr('dy', 3)
+        //                 .attr('x', d => d.children ? -8 : 8)
+        //                 .style('text-anchor', d => d.children ? 'end' : 'start')
+        //                 .text(d => d.data.name);
+        //         }
+        function calculateDistanceMatrix(correlationMatrix) {
+            const numAttributes = correlationMatrix.length;
+            const distanceMatrix = Array.from({ length: numAttributes }, () => Array(numAttributes).fill(0));
+        
+            for (let i = 0; i < numAttributes; i++) {
+                for (let j = 0; j < numAttributes; j++) {
+                    distanceMatrix[i][j] = Math.sqrt(2 * (1 - correlationMatrix[i][j]));
                 }
+            }
+        
+            return distanceMatrix;
+        }
         function calculateCorrelationMatrix(data) {
             const numAttributes = data[0].length;
             const correlationMatrix = Array.from({ length: numAttributes }, () => Array(numAttributes).fill(0));
