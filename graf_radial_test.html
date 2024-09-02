@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dendrograma Hexagonal con D3.js</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        .chart-container {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .node {
+            font: 12px sans-serif;
+        }
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            width: 80px;
+            height: 28px;
+            padding: 2px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 0px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+        .controls {
+            width: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-right: 20px;
+        }
+        .controls label {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+        .controls input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        svg {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <div class="controls">
+            <label><input type="checkbox" class="attribute-checkbox" value="PM2_5" checked> PM2_5</label>
+            <label><input type="checkbox" class="attribute-checkbox" value="PM10" checked> PM10</label>
+            <label><input type="checkbox" class="attribute-checkbox" value="NO2" checked> NO2</label>
+            <label><input type="checkbox" class="attribute-checkbox" value="CO" checked> CO</label>
+            <label><input type="checkbox" class="attribute-checkbox" value="O3" checked> O3</label>
+            <label><input type="checkbox" class="attribute-checkbox" value="SO2" checked> SO2</label>
+        </div>
+
+        <svg width="600" height="600"></svg>
+    </div>
+
+    <script>
+        const allAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
+        const distanceMatrix = [
+            [0.0, 0.62069677, 0.36880486, 0.19107372, 1.60952313, 0.25346412],
+            [0.62069677, 0.0, 1.39363881, 1.16909501, 0.56136622, 1.08796256],
+            [0.36880486, 1.39363881, 0.0, 0.06677664, 1.96447877, 0.17931765],
+            [0.19107372, 1.16909501, 0.06677664, 0.0, 1.89886521, 0.08274837],
+            [1.60952313, 0.56136622, 1.96447877, 1.89886521, 0.0, 1.7434927],
+            [0.25346412, 1.08796256, 0.17931765, 0.08274837, 1.7434927, 0.0]
+        ];
+
+        const width = 600;
+        const height = 600;
+        const radius = width / 2;
+        const clusterRadius = radius - 100; // Radio para los nodos hoja
+
+        const svg = d3.select("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", "translate(" + radius + "," + radius + ")");
+
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        // Función para actualizar el dendrograma según los atributos seleccionados
+        function updateDendrogram() {
+            const selectedAttributes = Array.from(document.querySelectorAll('.attribute-checkbox:checked')).map(cb => cb.value);
+
+            if (selectedAttributes.length < 2) {
+                svg.selectAll("*").remove();
+                return;
+            }
+
+            // Filtra la matriz de distancia según los atributos seleccionados
+            const selectedIndexes = selectedAttributes.map(attr => allAttributes.indexOf(attr));
+            const filteredMatrix = selectedIndexes.map(i => selectedIndexes.map(j => distanceMatrix[i][j]));
+
+            // Convierte la matriz de distancia en una jerarquía de clusters
+            const root = d3.hierarchy(buildHierarchy(selectedAttributes, filteredMatrix), d => d.children);
+
+            // Asigna posiciones en un hexágono a los nodos hoja
+            assignHexagonalLeafPositions(root, selectedAttributes.length);
+
+            const cluster = d3.cluster().size([2 * Math.PI, clusterRadius]);
+            cluster(root);
+
+            // Limpia la visualización anterior
+            svg.selectAll("*").remove();
+
+            // Dibuja los enlaces (links)
+            svg.selectAll(".link")
+                .data(root.links())
+                .enter().append("path")
+                .attr("class", "link")
+                .attr("d", d3.linkRadial()
+                    .angle(d => d.x)
+                    .radius(d => d.y));
+
+            // Dibuja los nodos (nodes)
+            const node = svg.selectAll(".node")
+                .data(root.descendants())
+                .enter().append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${project(d.x, d.y)})`)
+                .on("mouseover", function(event, d) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    tooltip.html("Distancia: " + (d.data.distance || 0).toFixed(2))
+                        .style("left", (event.pageX + 5) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function(d) {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+
+            node.append("circle")
+                .attr("r", 6); // Tamaño aumentado para los nodos
+
+            node.append("text")
+                .attr("dy", "0.31em")
+                .attr("x", d => d.x < Math.PI === !d.children ? 6 : -6)
+                .style("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
+                .attr("transform", d => {
+                    const angle = d.x * 180 / Math.PI;
+                    return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
+                })
+                .text(d => d.children ? null : d.data.name);
+        }
+
+        // Función para construir la jerarquía a partir de la matriz de distancias
+        function buildHierarchy(attributes, distanceMatrix) {
+            let clusters = attributes.map((attr, i) => ({
+                name: attr,
+                distance: 0,
+                index: i,
+                children: []
+            }));
+
+            let n = clusters.length;
+
+            while (n > 1) {
+                let minDistance = Infinity;
+                let a, b;
+
+                for (let i = 0; i < n; i++) {
+                    for (let j = i + 1; j < n; j++) {
+                        if (distanceMatrix[clusters[i].index][clusters[j].index] < minDistance) {
+                            minDistance = distanceMatrix[clusters[i].index][clusters[j].index];
+                            a = i;
+                            b = j;
+                        }
+                    }
+                }
+
+                const newCluster = {
+                    name: clusters[a].name + '-' + clusters[b].name,
+                    distance: minDistance,
+                    children: [clusters[a], clusters[b]],
+                    index: clusters[a].index
+                };
+
+                clusters = clusters.filter((_, i) => i !== a && i !== b);
+                clusters.push(newCluster);
+                n--;
+            }
+
+            return clusters[0];
+        }
+
+        // Asigna posiciones en un hexágono para los nodos hoja
+        function assignHexagonalLeafPositions(root, count) {
+            const leaves = root.leaves();
+            const angleStep = (2 * Math.PI) / count;
+            leaves.forEach((leaf, i) => {
+                leaf.x = i * angleStep;
+                leaf.y = clusterRadius;
+            });
+        }
+
+        // Proyección polar para el layout radial
+        function project(x, y) {
+            const angle = x - Math.PI / 2;
+            return [y * Math.cos(angle), y * Math.sin(angle)];
+        }
+
+        // Añade eventos para actualizar el dendrograma
+        document.querySelectorAll('.attribute-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateDendrogram);
+        });
+
+        // Inicializa el dendrograma
+        updateDendrogram();
+    </script>
+</body>
+</html>

@@ -342,12 +342,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const correlationMatrix = calculateCorrelationMatrix(matrix);
                         // Calcular la matriz de distancias
                 const distanceMatrix = calculateDistanceMatrix(correlationMatrix);
+                console.log("Matriz de correlacion:",correlationMatrix); // Muestra la matriz de correlación en la consola
                 console.log("Matriz de distancias:", distanceMatrix); // Muestra la matriz de distancias en la consola
 
                 // drawDendrogram(correlationMatrix, attributes);
 
                 // Aquí puedes llamar a la función para dibujar el dendrograma usando la matriz de correlación
-                console.log(correlationMatrix); // Muestra la matriz de correlación en la consola
+
                 // drawDendrogram(correlationMatrix); // Llama a la función para dibujar el dendrograma
             }).catch(error => {
                 console.error('Error al cargar el CSV:', error);

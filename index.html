@@ -73,7 +73,13 @@
             <div id="tooltip" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
             <div id="chart" class="chart"></div>
             <div id="hierarchical-chart"></div> <!-- Div para el gráfico jerárquico -->
+        
+            <!-- Botón centrado -->
+            <div class="centered-button">
+                <button id="exampleButton" onclick="redirectToExample()">Ejemplo</button>
+            </div>
         </div>
+        
         <div class="chart-container-pca">
             <div class="chart-header-pca">
                 <h2>Evolución Espacial</h2>
@@ -88,6 +94,9 @@
     <script src="static/script.js"></script>
 
     <script>
+        function redirectToExample() {
+            window.location.href = 'graf_radial_test.html';
+        }
         document.querySelector('.toggle-button').addEventListener('click', function() {
             const optionsContainer = document.querySelector('.options-container');
             optionsContainer.classList.toggle('hidden');
