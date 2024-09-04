@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
 
     // Carga el CSV y prepara los datos para el gráfico PCA
-    d3.csv('data/PCA_VIZ_AQI.csv').then(pcaData => {
+    d3.csv('data/PCA_VIZ_AQI_SIN-DW.csv').then(pcaData => {
         const aqiColors = {
             1: '#00E400', // Bueno (0-50)
             2: '#FFFF00', // Moderado (51-100)
@@ -316,83 +316,217 @@ document.addEventListener('DOMContentLoaded', () => {
             .on('click', function(event, d) {
                 console.log(`Fecha: ${d.date}, Hora: ${d.time}, PC1: ${d.PC1}, PC2: ${d.PC2}, AQI: ${d.AQI}, Station ID: ${d.stationId}`);
                 drawHierarchicalChart(d.date, d.stationId, d.time); // Llama a la función para dibujar el dendograma
+                
             });
 
 
         }
 
 
-        //MATRIZ DE CORRELACION
         function drawHierarchicalChart(date, stationId, time) {
-            d3.csv('data/beijing_17_18_aq.csv').then(data => {
-                // Filtrar los datos por fecha y stationId
-                const filteredData = data.filter(d => d.date === date && d.stationId === stationId);
-
+            Promise.all([
+                d3.csv('data/beijing_17_18_aq.csv'),
+                d3.csv('data/beijing_17_18_meo.csv'),
+                d3.csv('data/knn_PCA.csv')
+            ]).then(([aqData, meoData, knnData]) => {
+                // Filtrar los datos de contaminación por fecha y stationId
+                const filteredAqData = aqData.filter(d => d.date === date && d.stationId === stationId);
+                
+                // Buscar el nearest_meo_stationId correspondiente al stationId de contaminación
+                const nearestMeoStation = knnData.find(d => d.aqi_stationId === stationId)?.nearest_meo_stationId;
+                if (!nearestMeoStation) {
+                    console.error('No se encontró una estación meteorológica correspondiente.');
+                    return;
+                }
+        
+                // Filtrar los datos meteorológicos por fecha y nearest_meo_stationId
+                const filteredMeoData = meoData.filter(d => d.date === date && d.stationId === nearestMeoStation);
+        
+                // Verificar si hay datos suficientes para ambas categorías
+                if (filteredAqData.length === 0 || filteredMeoData.length === 0) {
+                    console.error('No se encontraron datos suficientes para la fecha y estaciones especificadas.');
+                    return;
+                }
+        
                 // Extraer los atributos relevantes
-                const attributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
+                const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
+                const meoAttributes = ['temperature', 'pressure', 'humidity'];
+                const attributes = [...aqAttributes, ...meoAttributes];
                 const matrix = [];
-
-                // Crear la matriz de datos
-                filteredData.forEach(row => {
-                    const rowData = attributes.map(attr => parseFloat(row[attr]) || 0); // Convertir a número
-                    matrix.push(rowData);
+        
+                // Combinar los datos de contaminación y meteorológicos basados en el tiempo
+                filteredAqData.forEach(row => {
+                    const correspondingMeoRow = filteredMeoData.find(d => d.time === row.time);
+                    if (correspondingMeoRow) {
+                        const aqDataRow = aqAttributes.map(attr => parseFloat(row[attr]) || 0);
+                        const meoDataRow = meoAttributes.map(attr => parseFloat(correspondingMeoRow[attr]) || 0);
+                        matrix.push([...aqDataRow, ...meoDataRow]);
+                    }
                 });
-
+        
                 // Calcular la matriz de correlación
                 const correlationMatrix = calculateCorrelationMatrix(matrix);
-                        // Calcular la matriz de distancias
+                // Calcular la matriz de distancias
                 const distanceMatrix = calculateDistanceMatrix(correlationMatrix);
-                console.log("Matriz de correlacion:",correlationMatrix); // Muestra la matriz de correlación en la consola
+        
+                console.log("Matriz de correlación:", correlationMatrix); // Muestra la matriz de correlación en la consola
                 console.log("Matriz de distancias:", distanceMatrix); // Muestra la matriz de distancias en la consola
-
-                // drawDendrogram(correlationMatrix, attributes);
-
+        
                 // Aquí puedes llamar a la función para dibujar el dendrograma usando la matriz de correlación
-
-                // drawDendrogram(correlationMatrix); // Llama a la función para dibujar el dendrograma
+                // buildHierarchy(distanceMatrix, attributes);
+                updateDendrogram();
             }).catch(error => {
-                console.error('Error al cargar el CSV:', error);
+                console.error('Error al cargar los CSV:', error);
             });
         }
-        // function drawDendrogram(correlationMatrix, attributes) {
-        //             const width = 600;
-        //             const height = 400;
+        const allAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
+        const distanceMatrix = [
+            [0.0, 0.62069677, 0.36880486, 0.19107372, 1.60952313, 0.25346412],
+            [0.62069677, 0.0, 1.39363881, 1.16909501, 0.56136622, 1.08796256],
+            [0.36880486, 1.39363881, 0.0, 0.06677664, 1.96447877, 0.17931765],
+            [0.19107372, 1.16909501, 0.06677664, 0.0, 1.89886521, 0.08274837],
+            [1.60952313, 0.56136622, 1.96447877, 1.89886521, 0.0, 1.7434927],
+            [0.25346412, 1.08796256, 0.17931765, 0.08274837, 1.7434927, 0.0]
+        ];
 
-        //             const svg = d3.select('#hierarchical-chart')
-        //                 .append('svg')
-        //                 .attr('width', width)
-        //                 .attr('height', height);
+        const width = 600;
+        const height = 600;
+        const radius = width / 2;
+        const clusterRadius = radius - 100;
 
-        //             const root = d3.hierarchy({ children: correlationMatrix.map((row, i) => ({ name: attributes[i], value: row })) });
+        const svg = d3.select("#tree-rad").append("svg")
+            .attr("width", width)
+            .attr("height", height);
 
-        //             const cluster = d3.cluster()
-        //                 .size([height, width - 160]);
+        const g = svg.append("g")
+            .attr("transform", `translate(${width / 2}, ${height / 2})`);
 
-        //             cluster(root);
+        const tooltip = d3.select("body").append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
 
-        //             const link = svg.selectAll('.link')
-        //                 .data(root.links())
-        //                 .enter().append('path')
-        //                 .attr('class', 'link')
-        //                 .attr('d', d3.linkHorizontal()
-        //                     .x(d => d.y)
-        //                     .y(d => d.x));
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 5])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
 
-        //             const node = svg.selectAll('.node')
-        //                 .data(root.descendants())
-        //                 .enter().append('g')
-        //                 .attr('class', d => `node${d.children ? ' node--internal' : ' node--leaf'}`)
-        //                 .attr('transform', d => `translate(${d.y},${d.x})`);
+        svg.call(zoom);
 
-        //             node.append('circle')
-        //                 .attr('r', 4);
+        function buildHierarchy(attributes, distanceMatrix) {
+            let clusters = attributes.map((attr, i) => ({
+                name: attr,
+                distance: 0,
+                index: i,
+                children: []
+            }));
 
-        //             node.append('text')
-        //                 .attr('dy', 3)
-        //                 .attr('x', d => d.children ? -8 : 8)
-        //                 .style('text-anchor', d => d.children ? 'end' : 'start')
-        //                 .text(d => d.data.name);
-        //         }
+            let n = clusters.length;
+
+            while (n > 1) {
+                let minDistance = Infinity;
+                let a, b;
+
+                for (let i = 0; i < n; i++) {
+                    for (let j = i + 1; j < n; j++) {
+                        if (distanceMatrix[clusters[i].index][clusters[j].index] < minDistance) {
+                            minDistance = distanceMatrix[clusters[i].index][clusters[j].index];
+                            a = i;
+                            b = j;
+                        }
+                    }
+                }
+
+                const newCluster = {
+                    name: clusters[a].name + '-' + clusters[b].name,
+                    distance: minDistance,
+                    children: [clusters[a], clusters[b]],
+                    index: clusters[a].index
+                };
+
+                clusters = clusters.filter((_, i) => i !== a && i !== b);
+                clusters.push(newCluster);
+                n--;
+            }
+
+            return clusters[0];
+        }
+
+        function project(x, y) {
+            const angle = x - Math.PI / 2;
+            return [y * Math.cos(angle), y * Math.sin(angle)];
+        }
+
+        function updateDendrogram() {
+            const selectedAttributes = allAttributes;
+
+            if (selectedAttributes.length < 2) {
+                g.selectAll("*").remove();
+                return;
+            }
+
+            const selectedIndexes = selectedAttributes.map(attr => allAttributes.indexOf(attr));
+            const filteredMatrix = selectedIndexes.map(i => selectedIndexes.map(j => distanceMatrix[i][j]));
+
+            const root = d3.hierarchy(buildHierarchy(selectedAttributes, filteredMatrix), d => d.children);
+
+            assignRadialLeafPositions(root, selectedAttributes.length);
+
+            const cluster = d3.cluster().size([2 * Math.PI, clusterRadius]);
+            cluster(root);
+
+            g.selectAll("*").remove();
+
+            g.selectAll(".link")
+                .data(root.links())
+                .enter().append("path")
+                .attr("class", "link")
+                .attr("d", d3.linkRadial()
+                    .angle(d => d.x)
+                    .radius(d => d.y));
+
+            const node = g.selectAll(".node")
+                .data(root.descendants())
+                .enter().append("g")
+                .attr("class", "node")
+                .attr("transform", d => `translate(${project(d.x, d.y)})`)
+                .on("mouseover", function(event, d) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    tooltip.html("Distancia: " + (d.data.distance || 0).toFixed(2))
+                        .style("left", (event.pageX + 5) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+
+            node.append("circle")
+                .attr("r", 6);
+
+            node.append("text")
+                .attr("dy", "0.31em")
+                .attr("x", d => d.x < Math.PI === !d.children ? 6 : -6)
+                .style("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
+                .attr("transform", d => {
+                    const angle = d.x * 180 / Math.PI;
+                    return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
+                })
+                .text(d => d.children ? null : d.data.name);
+        }
+
+        function assignRadialLeafPositions(root, count) {
+            const leaves = root.leaves();
+            const angleStep = (2 * Math.PI) / count;
+            leaves.forEach((leaf, i) => {
+                leaf.x = i * angleStep;
+                leaf.y = clusterRadius;
+            });
+        }
+
         function calculateDistanceMatrix(correlationMatrix) {
             const numAttributes = correlationMatrix.length;
             const distanceMatrix = Array.from({ length: numAttributes }, () => Array(numAttributes).fill(0));
@@ -405,19 +539,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
             return distanceMatrix;
         }
+        
         function calculateCorrelationMatrix(data) {
             const numAttributes = data[0].length;
             const correlationMatrix = Array.from({ length: numAttributes }, () => Array(numAttributes).fill(0));
-
+        
             for (let i = 0; i < numAttributes; i++) {
                 for (let j = 0; j < numAttributes; j++) {
                     correlationMatrix[i][j] = calculateCorrelation(data.map(row => row[i]), data.map(row => row[j]));
                 }
             }
-
+        
             return correlationMatrix;
         }
-
+        
         function calculateCorrelation(x, y) {
             const n = x.length;
             const sumX = x.reduce((a, b) => a + b, 0);
@@ -425,25 +560,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
             const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
             const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
-
+        
             const numerator = n * sumXY - sumX * sumY;
             const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-
+        
             return denominator === 0 ? 0 : numerator / denominator; // Evitar división por cero
         }
-
+        
         // Añadir eventos de cambio para actualizar el gráfico PCA
         function setupEventListenersForPCA() {
             stationIdSelect.addEventListener('change', updatePCAChart);
             startDateInput.addEventListener('change', updatePCAChart);
             endDateInput.addEventListener('change', updatePCAChart);
         }
-    
+
         // Configura los eventos de cambio
         setupEventListenersForPCA();
     
         // Inicializa el gráfico PCA
         updatePCAChart();
     });
+
+    
     
 });
