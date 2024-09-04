@@ -264,14 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const width = 600; // Ancho fijo
             const height = 400; // Alto fijo
     
-            const svg = pcaChartDiv.append('svg')
+            const pcaSvg = pcaChartDiv.append('svg')
                 .attr('width', width)
                 .attr('height', height)
                 .call(d3.zoom().on('zoom', (event) => {
                     g.attr('transform', event.transform);
                 }));
     
-            const g = svg.append('g'); // Contenedor para aplicar el zoom y el pan
+            const g = pcaSvg.append('g'); // Contenedor para aplicar el zoom y el pan
     
             const xScale = d3.scaleLinear()
                 .domain(d3.extent(filteredData, d => +d.PC1))
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .attr('r', 6)
             .attr('fill', d => aqiColors[d.AQI]) // Asigna el color basado en el valor de AQI
             .on('mouseover', function(event, d) {
-                const [x, y] = d3.pointer(event, svg.node());
+                const [x, y] = d3.pointer(event, pcaSvg.node());
 
                 tooltipPCA.style('display', 'block')
                     .html(`Fecha: ${d.date}<br>AQI: ${d.AQI}<br>PC1: ${d.PC1}<br>PC2: ${d.PC2}`)
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     .style('top', `${y - 28}px`);
             })
             .on('mousemove', function(event) {
-                const [x, y] = d3.pointer(event, svg.node());
+                const [x, y] = d3.pointer(event, pcaSvg.node());
                 d3.select(this).transition().attr('r', 10) // Aumenta el radio al pasar el mouse
                     .style('stroke', 'red') // Establece el color del borde como rojo
                     .style('stroke-width', '2px'); // Establece el ancho del borde
@@ -372,21 +372,82 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Matriz de correlación:", correlationMatrix); // Muestra la matriz de correlación en la consola
                 console.log("Matriz de distancias:", distanceMatrix); // Muestra la matriz de distancias en la consola
         
-                // Aquí puedes llamar a la función para dibujar el dendrograma usando la matriz de correlación
-                // buildHierarchy(distanceMatrix, attributes);
-                updateDendrogram();
+                // Asegúrate de que 'attributes' no esté vacío antes de construir la jerarquía
+                if (attributes.length === 0) {
+                    console.error('No hay atributos disponibles para construir la jerarquía.');
+                    return; // Salir si no hay atributos
+                }
+        
+                const root = d3.hierarchy(buildHierarchy(attributes, distanceMatrix), d => d.children);
+
+                assignRadialLeafPositions(root, attributes.length);
+
+                const cluster = d3.cluster().size([2 * Math.PI, clusterRadius]);
+                cluster(root);
+
+                g.selectAll("*").remove();
+
+                g.selectAll(".link")
+                    .data(root.links())
+                    .enter().append("path")
+                    .attr("class", d => {
+                        const sourceIsMeo = meoAttributes.includes(d.source.data.name);
+                        const targetIsMeo = meoAttributes.includes(d.target.data.name);
+                        return (sourceIsMeo || targetIsMeo) ? "highlighted-link" : "link"; // Solo líneas rojas
+                    })
+                    .attr("d", d3.linkRadial()
+                        .angle(d => d.x)
+                        .radius(d => d.y));
+
+                const node = g.selectAll(".node")
+                    .data(root.descendants())
+                    .enter().append("g")
+                    .attr("class", "node")
+                    .attr("transform", d => `translate(${project(d.x, d.y)})`)
+                    .on("mouseover", function(event, d) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                        tooltip.html("Distancia: " + (d.data.distance || 0).toFixed(2))
+                            .style("left", (event.pageX + 5) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        tooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                    });
+
+                node.append("circle")
+                    .attr("r", 6);
+
+                node.append("text")
+                    .attr("dy", "0.31em")
+                    .attr("x", d => d.x < Math.PI === !d.children ? 6 : -6)
+                    .style("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
+                    .attr("transform", d => {
+                        const angle = d.x * 180 / Math.PI;
+                        return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
+                    })
+                    .text(d => d.children ? null : d.data.name);
             }).catch(error => {
                 console.error('Error al cargar los CSV:', error);
             });
         }
-        const allAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
+        const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
+        const meoAttributes = ['temperature', 'pressure', 'humidity'];
+        const allAttributes = [...aqAttributes, ...meoAttributes];
+
         const distanceMatrix = [
-            [0.0, 0.62069677, 0.36880486, 0.19107372, 1.60952313, 0.25346412],
-            [0.62069677, 0.0, 1.39363881, 1.16909501, 0.56136622, 1.08796256],
-            [0.36880486, 1.39363881, 0.0, 0.06677664, 1.96447877, 0.17931765],
-            [0.19107372, 1.16909501, 0.06677664, 0.0, 1.89886521, 0.08274837],
-            [1.60952313, 0.56136622, 1.96447877, 1.89886521, 0.0, 1.7434927],
-            [0.25346412, 1.08796256, 0.17931765, 0.08274837, 1.7434927, 0.0]
+            [0, 1.4324659468581082, 1.3741895017246408, 1.3524283396263526, 1.4720110156685529, 1.2994422485865655, 1.4836641127218884, 1.331634983831686, 1.422883153029264],
+            [1.4324659468581082, 0, 1.6014916188289152, 1.86478561751244, 1.0731520507954366, 1.5968148564476228, 1.0967284473847863, 1.7720926804895984, 1.0109657534053984],
+            [1.3741895017246408, 1.6014916188289152, 0, 1.3985167089056112, 1.8443744807132447, 1.3868541475433116, 1.6843486662554692, 1.3105987853399388, 1.2645600726881148],
+            [1.3524283396263526, 1.86478561751244, 1.3985167089056112, 0, 1.509354235267772, 1.1035011463187883, 1.561205830354015, 1.0589119642884466, 1.7826048063351183],
+            [1.4720110156685529, 1.0731520507954366, 1.8443744807132447, 1.509354235267772, 0, 1.5872779321783976, 0.47505894244748764, 1.8529645030914041, 1.6492316467665937],
+            [1.2994422485865655, 1.5968148564476228, 1.3868541475433116, 1.1035011463187883, 1.5872779321783976, 0, 1.622162815171491, 1.1007758723829226, 1.517179854827837],
+            [1.4836641127218884, 1.0967284473847863, 1.6843486662554692, 1.561205830354015, 0.47505894244748764, 1.622162815171491, 0, 1.9385690595122151, 1.6136559577538154],
+            [1.331634983831686, 1.7720926804895984, 1.3105987853399388, 1.0589119642884466, 1.8529645030914041, 1.1007758723829226, 1.9385690595122151, 0, 1.458225881162374],
+            [1.422883153029264, 1.0109657534053984, 1.2645600726881148, 1.7826048063351183, 1.6492316467665937, 1.517179854827837, 1.6136559577538154, 1.458225881162374, 0]
         ];
 
         const width = 600;
@@ -458,19 +519,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function updateDendrogram() {
-            const selectedAttributes = allAttributes;
+            const selectedAttributes = Array.from(document.querySelectorAll('.attribute-checkbox:checked')).map(cb => cb.value);
+            // Filtrar para incluir solo atributos de calidad del aire
+            const filteredAttributes = selectedAttributes.filter(attr => aqAttributes.includes(attr));
 
-            if (selectedAttributes.length < 2) {
+            if (filteredAttributes.length < 2) {
                 g.selectAll("*").remove();
                 return;
             }
 
-            const selectedIndexes = selectedAttributes.map(attr => allAttributes.indexOf(attr));
+            const selectedIndexes = filteredAttributes.map(attr => allAttributes.indexOf(attr));
             const filteredMatrix = selectedIndexes.map(i => selectedIndexes.map(j => distanceMatrix[i][j]));
 
-            const root = d3.hierarchy(buildHierarchy(selectedAttributes, filteredMatrix), d => d.children);
+            const root = d3.hierarchy(buildHierarchy(filteredAttributes, filteredMatrix), d => d.children);
 
-            assignRadialLeafPositions(root, selectedAttributes.length);
+            assignRadialLeafPositions(root, filteredAttributes.length);
 
             const cluster = d3.cluster().size([2 * Math.PI, clusterRadius]);
             cluster(root);
@@ -480,7 +543,11 @@ document.addEventListener('DOMContentLoaded', () => {
             g.selectAll(".link")
                 .data(root.links())
                 .enter().append("path")
-                .attr("class", "link")
+                .attr("class", d => {
+                    const sourceIsMeo = meoAttributes.includes(d.source.data.name);
+                    const targetIsMeo = meoAttributes.includes(d.target.data.name);
+                    return (sourceIsMeo || targetIsMeo) ? "highlighted-link" : "link"; // Solo líneas rojas
+                })
                 .attr("d", d3.linkRadial()
                     .angle(d => d.x)
                     .radius(d => d.y));

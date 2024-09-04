@@ -218,3 +218,9 @@ button:hover {
 .node {
     font: 12px;
 }
+.highlighted-link {
+    stroke: red;
+    fill: none;
+    stroke-width: 2px;
+    stroke-dasharray: 4, 4; /* Línea punteada */
+}
