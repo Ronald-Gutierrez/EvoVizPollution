@@ -224,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log(`Station ID: ${d.stationId}, Fecha: ${d.formattedDate}, AQI: ${d.aqi}`);
             }
         }
+        
 
         // Configura los eventos de cambio
         setupEventListeners();
@@ -233,9 +234,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     
+    const defaultDate = '2018-01-01'; // Cambia esto a la fecha que desees
+    startDateInput.value = defaultDate; // Establece la fecha de inicio
+    endDateInput.value = defaultDate; // Establece la fecha de fin
+
+
 
     // Carga el CSV y prepara los datos para el gráfico PCA
     d3.csv('data/PCA_VIZ_AQI_SIN-DW.csv').then(pcaData => {
+        
         const aqiColors = {
             1: '#00E400', // Bueno (0-50)
             2: '#FFFF00', // Moderado (51-100)
@@ -367,8 +374,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Calcular la matriz de correlación
                 const correlationMatrix = calculateCorrelationMatrix(matrix);
                 // Calcular la matriz de distancias
-                const distanceMatrix = calculateDistanceMatrix(correlationMatrix);
-        
+                let distanceMatrix; // Cambia 'const' a 'let' para permitir la reasignación
+
+                // Calcula la matriz de distancias
+                distanceMatrix = calculateDistanceMatrix(correlationMatrix); // Usa esta distancia
+                // ... código existente ...
+            
+    
+                // Calcula la matriz de distancias
+                distanceMatrix = calculateDistanceMatrix(correlationMatrix); // Usa esta distancia
+                
+
                 console.log("Matriz de correlación:", correlationMatrix); // Muestra la matriz de correlación en la consola
                 console.log("Matriz de distancias:", distanceMatrix); // Muestra la matriz de distancias en la consola
         
@@ -430,49 +446,44 @@ document.addEventListener('DOMContentLoaded', () => {
                         return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
                     })
                     .text(d => d.children ? null : d.data.name);
+                
             }).catch(error => {
                 console.error('Error al cargar los CSV:', error);
             });
+            
         }
-        const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
-        const meoAttributes = ['temperature', 'pressure', 'humidity'];
-        const allAttributes = [...aqAttributes, ...meoAttributes];
-
-        const distanceMatrix = [
-            [0, 1.4324659468581082, 1.3741895017246408, 1.3524283396263526, 1.4720110156685529, 1.2994422485865655, 1.4836641127218884, 1.331634983831686, 1.422883153029264],
-            [1.4324659468581082, 0, 1.6014916188289152, 1.86478561751244, 1.0731520507954366, 1.5968148564476228, 1.0967284473847863, 1.7720926804895984, 1.0109657534053984],
-            [1.3741895017246408, 1.6014916188289152, 0, 1.3985167089056112, 1.8443744807132447, 1.3868541475433116, 1.6843486662554692, 1.3105987853399388, 1.2645600726881148],
-            [1.3524283396263526, 1.86478561751244, 1.3985167089056112, 0, 1.509354235267772, 1.1035011463187883, 1.561205830354015, 1.0589119642884466, 1.7826048063351183],
-            [1.4720110156685529, 1.0731520507954366, 1.8443744807132447, 1.509354235267772, 0, 1.5872779321783976, 0.47505894244748764, 1.8529645030914041, 1.6492316467665937],
-            [1.2994422485865655, 1.5968148564476228, 1.3868541475433116, 1.1035011463187883, 1.5872779321783976, 0, 1.622162815171491, 1.1007758723829226, 1.517179854827837],
-            [1.4836641127218884, 1.0967284473847863, 1.6843486662554692, 1.561205830354015, 0.47505894244748764, 1.622162815171491, 0, 1.9385690595122151, 1.6136559577538154],
-            [1.331634983831686, 1.7720926804895984, 1.3105987853399388, 1.0589119642884466, 1.8529645030914041, 1.1007758723829226, 1.9385690595122151, 0, 1.458225881162374],
-            [1.422883153029264, 1.0109657534053984, 1.2645600726881148, 1.7826048063351183, 1.6492316467665937, 1.517179854827837, 1.6136559577538154, 1.458225881162374, 0]
-        ];
-
         const width = 600;
-        const height = 600;
-        const radius = width / 2;
+        const height = 380;
+        const radius = width / 2.5;
         const clusterRadius = radius - 100;
-
+        
         const svg = d3.select("#tree-rad").append("svg")
             .attr("width", width)
             .attr("height", height);
-
+        
         const g = svg.append("g")
-            .attr("transform", `translate(${width / 2}, ${height / 2})`);
-
+            .attr("transform", `translate(${width / 2.4}, ${height / 2})`); // Centra el grupo en el SVG
+        
         const tooltip = d3.select("body").append("div")
             .attr("class", "tooltip")
             .style("opacity", 0);
-
+        
         const zoom = d3.zoom()
-            .scaleExtent([0.5, 5])
-            .on("zoom", (event) => {
-                g.attr("transform", event.transform);
+            .scaleExtent([0.5, 5])  // Define el rango de zoom
+            .on('zoom', (event) => {
+                const { transform } = event;
+                const [x, y] = d3.pointer(event, svg.node());
+                
+                // Calcula la traslación para centrar el zoom en la posición del ratón
+                const tx = x * transform.k - width / 2;
+                const ty = y * transform.k - height / 2;
+                
+                // Aplica la transformación
+                g.attr('transform', `translate(${width / 2}, ${height / 2}) scale(${transform.k}) translate(${tx}, ${ty})`);
             });
-
+        
         svg.call(zoom);
+        
 
         function buildHierarchy(attributes, distanceMatrix) {
             let clusters = attributes.map((attr, i) => ({
@@ -513,78 +524,20 @@ document.addEventListener('DOMContentLoaded', () => {
             return clusters[0];
         }
 
+        
+
         function project(x, y) {
             const angle = x - Math.PI / 2;
             return [y * Math.cos(angle), y * Math.sin(angle)];
         }
-
-        function updateDendrogram() {
-            const selectedAttributes = Array.from(document.querySelectorAll('.attribute-checkbox:checked')).map(cb => cb.value);
-            // Filtrar para incluir solo atributos de calidad del aire
-            const filteredAttributes = selectedAttributes.filter(attr => aqAttributes.includes(attr));
-
-            if (filteredAttributes.length < 2) {
-                g.selectAll("*").remove();
-                return;
-            }
-
-            const selectedIndexes = filteredAttributes.map(attr => allAttributes.indexOf(attr));
-            const filteredMatrix = selectedIndexes.map(i => selectedIndexes.map(j => distanceMatrix[i][j]));
-
-            const root = d3.hierarchy(buildHierarchy(filteredAttributes, filteredMatrix), d => d.children);
-
-            assignRadialLeafPositions(root, filteredAttributes.length);
-
-            const cluster = d3.cluster().size([2 * Math.PI, clusterRadius]);
-            cluster(root);
-
-            g.selectAll("*").remove();
-
-            g.selectAll(".link")
-                .data(root.links())
-                .enter().append("path")
-                .attr("class", d => {
-                    const sourceIsMeo = meoAttributes.includes(d.source.data.name);
-                    const targetIsMeo = meoAttributes.includes(d.target.data.name);
-                    return (sourceIsMeo || targetIsMeo) ? "highlighted-link" : "link"; // Solo líneas rojas
-                })
-                .attr("d", d3.linkRadial()
-                    .angle(d => d.x)
-                    .radius(d => d.y));
-
-            const node = g.selectAll(".node")
-                .data(root.descendants())
-                .enter().append("g")
-                .attr("class", "node")
-                .attr("transform", d => `translate(${project(d.x, d.y)})`)
-                .on("mouseover", function(event, d) {
-                    tooltip.transition()
-                        .duration(200)
-                        .style("opacity", .9);
-                    tooltip.html("Distancia: " + (d.data.distance || 0).toFixed(2))
-                        .style("left", (event.pageX + 5) + "px")
-                        .style("top", (event.pageY - 28) + "px");
-                })
-                .on("mouseout", function() {
-                    tooltip.transition()
-                        .duration(500)
-                        .style("opacity", 0);
-                });
-
-            node.append("circle")
-                .attr("r", 6);
-
-            node.append("text")
-                .attr("dy", "0.31em")
-                .attr("x", d => d.x < Math.PI === !d.children ? 6 : -6)
-                .style("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
-                .attr("transform", d => {
-                    const angle = d.x * 180 / Math.PI;
-                    return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
-                })
-                .text(d => d.children ? null : d.data.name);
+        function assignHexagonalLeafPositions(root, count) {
+            const leaves = root.leaves();
+            const angleStep = (2 * Math.PI) / count;
+            leaves.forEach((leaf, i) => {
+                leaf.x = i * angleStep;
+                leaf.y = clusterRadius;
+            });
         }
-
         function assignRadialLeafPositions(root, count) {
             const leaves = root.leaves();
             const angleStep = (2 * Math.PI) / count;
@@ -640,6 +593,10 @@ document.addEventListener('DOMContentLoaded', () => {
             startDateInput.addEventListener('change', updatePCAChart);
             endDateInput.addEventListener('change', updatePCAChart);
         }
+        
+
+
+
 
         // Configura los eventos de cambio
         setupEventListenersForPCA();
@@ -647,6 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Inicializa el gráfico PCA
         updatePCAChart();
     });
+    
 
     
     

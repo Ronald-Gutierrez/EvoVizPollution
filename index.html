@@ -43,7 +43,7 @@
                 <div>
                     <label>Seleccionar Contaminante:</label>
                     <div class="radio-group">
-                        <label><input type="radio" name="contaminant" value="PM2_5"> PM2.5</label>
+                        <label><input type="radio" name="contaminant" value="PM2_5"checked> PM2.5</label>
                         <label><input type="radio" name="contaminant" value="PM10"> PM10</label>
                         <label><input type="radio" name="contaminant" value="NO2"> NO2</label>
                         <label><input type="radio" name="contaminant" value="CO"> CO</label>
@@ -91,7 +91,21 @@
             <div class="chart-header-tree-rad">
                 <h2>Árbol Jerárquico</h2>
             </div>
+        
+            <div class="controls">
+                <label><input type="checkbox" class="attribute-checkbox" value="PM2_5" checked> PM2_5</label>
+                <label><input type="checkbox" class="attribute-checkbox" value="PM10" checked> PM10</label>
+                <label><input type="checkbox" class="attribute-checkbox" value="NO2" checked> NO2</label>
+                <label><input type="checkbox" class="attribute-checkbox" value="CO" checked> CO</label>
+                <label><input type="checkbox" class="attribute-checkbox" value="O3" checked> O3</label>
+                <label><input type="checkbox" class="attribute-checkbox" value="SO2" checked> SO2</label>
+                <label><input type="checkbox" class="attribute-checkbox" value="temperature" checked> Temperature</label>
+                <label><input type="checkbox" class="attribute-checkbox" value="pressure" checked> Pressure</label>
+                <label><input type="checkbox" class="attribute-checkbox" value="humidity" checked> Humidity</label>
+            </div>
+        
             <div id="tooltip-rad" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
+        
             <div id="tree-rad" class="chart"></div>
         </div>
         

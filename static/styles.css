@@ -224,3 +224,22 @@ button:hover {
     stroke-width: 2px;
     stroke-dasharray: 4, 4; /* Línea punteada */
 }
+/* Estilo para el contenedor de los controles */
+.controls {
+    position: absolute; /* Permite posicionar el contenedor dentro del contenedor principal */
+    right: 0; /* Coloca el contenedor en la parte derecha */
+    top: 52px; /* Espacio desde la parte superior */
+    width: 100px; /* Ancho del contenedor más pequeño */
+    background-color: rgba(255, 255, 255, 0); /* Fondo transparente */
+    padding: 8px; /* Espacio interno reducido */
+    /* border: 1px solid #ddd; Borde gris claro */
+    /* box-shadow: 0 2px 4px rgba(0,0,0,0.1); Elimina la sombra */
+    z-index: 1000; /* Asegura que esté sobre otros elementos */
+}
+
+.controls label {
+    display: block; /* Muestra cada etiqueta en una nueva línea */
+    margin-bottom: 2px; /* Espacio entre las etiquetas */
+    font-size: 16px; /* Tamaño de fuente más pequeño */
+
+}
