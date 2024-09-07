@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tooltip = d3.select('#tooltip');
     const pcaChartDiv = d3.select('#pca-chart');
     const tooltipPCA = d3.select('#tooltip-pca');
+    const tooltipRAD = d3.select('tooltip-rad');
 
     // Define colores para los niveles de AQI
     const aqiColors = {
@@ -415,28 +416,67 @@ document.addEventListener('DOMContentLoaded', () => {
                         .angle(d => d.x)
                         .radius(d => d.y));
 
+                // Define una escala de color que mapea las distancias a colores de rojo (más cerca) a blanco (más lejos)
+                const colorScale = d3.scaleLinear()
+                    .domain([0, d3.max(root.descendants(), d => d.data.distance || 0)]) // Rango de distancias
+                    .range(["#FF0000", "#FF6665"]); // De rojo intenso a rojo menos intenso
+
                 const node = g.selectAll(".node")
                     .data(root.descendants())
                     .enter().append("g")
                     .attr("class", "node")
                     .attr("transform", d => `translate(${project(d.x, d.y)})`)
                     .on("mouseover", function(event, d) {
-                        tooltip.transition()
-                            .duration(200)
-                            .style("opacity", .9);
-                        tooltip.html("Distancia: " + (d.data.distance || 0).toFixed(2))
-                            .style("left", (event.pageX + 5) + "px")
-                            .style("top", (event.pageY - 28) + "px");
+                        tooltipRAD.style('display', 'block');
+                        const node = d3.select(this);
+                        const circle = node.select("circle");
+                    
+                        // Transición para el crecimiento del nodo y del borde
+                        circle.transition()
+                            .duration(300) // Duración de la transición en milisegundos
+                            .attr("r", 10) // Tamaño del nodo aumentado
+                            .style("stroke", "blue") // Color del borde
+                            .style("stroke-width", 2); // Grosor del borde
+                    
+                        // Muestra el texto de distancia
+                        const xPos = 0; // Posición x del nodo en el grupo
+                        const yPos = -15; // Posición y del texto (un poco arriba del nodo)
+                    
+                        // Elimina el texto de distancia existente para evitar duplicados
+                        node.selectAll(".distance-label").remove();
+                    
+                        // Añadir el texto de distancia al grupo del nodo
+                        node.append("text")
+                            .attr("class", "distance-label")
+                            .attr("x", xPos)
+                            .attr("y", yPos) // Ajusta la posición vertical (un poco arriba del nodo)
+                            .attr("text-anchor", "middle")
+                            .text("Distancia: " + (d.data.distance || 0).toFixed(2));
                     })
                     .on("mouseout", function() {
-                        tooltip.transition()
-                            .duration(500)
-                            .style("opacity", 0);
+                        const node = d3.select(this);
+                        const circle = node.select("circle");
+                    
+                        // Transición para el regreso al tamaño original y borde
+                        circle.transition()
+                            .duration(300) // Duración de la transición en milisegundos
+                            .attr("r", 6) // Tamaño del nodo original
+                            .style("stroke", "none") // Elimina el borde
+                            .style("stroke-width", 0); // Elimina el grosor del borde
+                    
+                        node.selectAll(".distance-label").remove(); // Elimina el texto de distancia
+                    })
+                    
+                    .on("click", function(event, d) {
+                        console.log("Distancia del nodo:", d.data.distance || 0);
                     });
 
+                // Añadir el círculo y aplicar la escala de color basada en la distancia
                 node.append("circle")
-                    .attr("r", 6);
+                    .attr("r", 6)
+                    .style("fill", d => colorScale(d.data.distance || 0)); // Aplica la escala de color basada en la distancia
 
+                // Añadir el texto del nodo (si no tiene hijos)
                 node.append("text")
                     .attr("dy", "0.31em")
                     .attr("x", d => d.x < Math.PI === !d.children ? 6 : -6)
@@ -446,12 +486,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
                     })
                     .text(d => d.children ? null : d.data.name);
-                
-            }).catch(error => {
-                console.error('Error al cargar los CSV:', error);
-            });
-            
-        }
+                                
+                            }).catch(error => {
+                                console.error('Error al cargar los CSV:', error);
+                            });
+                            
+                        }
+                        
         const width = 600;
         const height = 380;
         const radius = width / 2.5;
