@@ -416,11 +416,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         .angle(d => d.x)
                         .radius(d => d.y));
 
-                // Define una escala de color que mapea las distancias a colores de rojo (más cerca) a blanco (más lejos)
-                const colorScale = d3.scaleLinear()
-                    .domain([0, d3.max(root.descendants(), d => d.data.distance || 0)]) // Rango de distancias
-                    .range(["#FF0000", "#FF6665"]); // De rojo intenso a rojo menos intenso
-
+                        const colorScale = d3.scaleLinear()
+                        .domain([0, d3.max(root.descendants(), d => d.data.distance || 0)]) // Rango de distancias
+                        .range(["#FF0000", "#FF9999"]); // De rojo intenso a rojo más claro
+                    
                 const node = g.selectAll(".node")
                     .data(root.descendants())
                     .enter().append("g")

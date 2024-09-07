@@ -98,7 +98,7 @@ p {
 
 .chart-container-pca {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
-    top: 470px; /* Espaciado desde el borde superior */
+    top: 20px; /* Espaciado desde el borde superior */
     left: 400px; /* Espaciado desde el borde izquierdo */
     width: 30vw; /* Ancho de la ventana de visualización */
     height: 46vh; /* Alto de la ventana de visualización */
@@ -122,7 +122,7 @@ p {
 
 .chart-container-tree-rad {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
-    top: 470px; /* Espaciado desde el borde superior */
+    top: 20px; /* Espaciado desde el borde superior */
     left: 1000px; /* Espaciado desde el borde izquierdo */
     width: 30vw; /* Ancho de la ventana de visualización */
     height: 46vh; /* Alto de la ventana de visualización */
@@ -143,6 +143,33 @@ p {
     text-align: center; /* Centra el texto del encabezado */
     height: 50px;
 }
+
+/* PARA MI SERIE TEMPORAL */
+
+.chart-container-time-temporal {
+    position: absolute; /* Posiciona el contenedor de manera absoluta */
+    top: 470px; /* Espaciado desde el borde superior */
+    left: 400px; /* Espaciado desde el borde izquierdo */
+    width: 70vw; /* Ancho de la ventana de visualización */
+    height: 46vh; /* Alto de la ventana de visualización */
+    border: 1px solid #ccc; /* Borde de la ventana */
+    border-radius: 10px; /* Bordes redondeados */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra de la ventana */
+    background-color: #f9f9f9; /* Fondo del contenedor */
+    overflow: hidden; /* Oculta el contenido desbordado */
+    display: flex;
+    flex-direction: column; /* Coloca el título encima del gráfico */
+    z-index: 1; /* Asegura que el contenedor esté sobre otros elementos */
+}
+.chart-header-time-temporal {
+    background-color: #d3cfcf; /* Fondo del encabezado */
+    color: #000000; /* Color del texto del encabezado */
+    padding: 1px; /* Espaciado dentro del encabezado */
+    border-bottom: 1px solid #ffffff; /* Línea divisoria debajo del encabezado */
+    text-align: center; /* Centra el texto del encabezado */
+    height: 50px;
+}
+
 .chart-header {
     background-color: #d3cfcf; /* Fondo del encabezado */
     color: #000000; /* Color del texto del encabezado */
