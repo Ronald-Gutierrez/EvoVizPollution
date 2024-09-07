@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const [x, y] = d3.pointer(event, pcaSvg.node());
 
                 tooltipPCA.style('display', 'block')
-                    .html(`Fecha: ${d.date}<br>AQI: ${d.AQI}<br>PC1: ${d.PC1}<br>PC2: ${d.PC2}`)
+                    .html(`Fecha: ${new Date(new Date(d.date).setDate(new Date(d.date).getDate() + 1)).toLocaleDateString()}<br>Hora: ${d.time} <br>AQI: ${d.AQI}`)
                     .style('left', `${x + 5}px`)
                     .style('top', `${y - 28}px`);
             })
@@ -530,14 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const angle = x - Math.PI / 2;
             return [y * Math.cos(angle), y * Math.sin(angle)];
         }
-        function assignHexagonalLeafPositions(root, count) {
-            const leaves = root.leaves();
-            const angleStep = (2 * Math.PI) / count;
-            leaves.forEach((leaf, i) => {
-                leaf.x = i * angleStep;
-                leaf.y = clusterRadius;
-            });
-        }
+
         function assignRadialLeafPositions(root, count) {
             const leaves = root.leaves();
             const angleStep = (2 * Math.PI) / count;
@@ -594,18 +587,11 @@ document.addEventListener('DOMContentLoaded', () => {
             endDateInput.addEventListener('change', updatePCAChart);
         }
         
-
-
-
-
         // Configura los eventos de cambio
         setupEventListenersForPCA();
     
         // Inicializa el gráfico PCA
         updatePCAChart();
     });
-    
-
-    
     
 });
