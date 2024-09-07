@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
         const width = 600;
         const height = 380;
-        const radius = width / 2.5;
+        const radius = width / 2.6;
         const clusterRadius = radius - 100;
         
         const svg = d3.select("#tree-rad").append("svg")
@@ -502,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .attr("height", height);
         
         const g = svg.append("g")
-            .attr("transform", `translate(${width / 2.4}, ${height / 2})`); // Centra el grupo en el SVG
+            .attr("transform", `translate(${width / 2.9}, ${height / 2})`); // Centra el grupo en el SVG
         
         const tooltip = d3.select("body").append("div")
             .attr("class", "tooltip")

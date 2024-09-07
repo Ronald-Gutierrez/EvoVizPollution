@@ -270,3 +270,34 @@ button:hover {
     font-size: 16px; /* Tamaño de fuente más pequeño */
 
 }
+/* CONTROLES DE LA LEYENDA DE CORRELACION */
+.gradient-legend {
+    position: absolute;
+    bottom: 10px; 
+    right: 10px;  
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; 
+    background: rgba(255, 255, 255, 0); 
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.gradient-bar {
+    width: 200px;
+    height: 20px;
+    background: linear-gradient(to right, #ff0000, #ffaaaa);
+    border: 1px solid #ccc;
+    margin-bottom: 5px;
+}
+
+.legend-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 200px;
+}
+
+.legend-labels span {
+    font-size: 14px;
+    color: #333;
+}

@@ -103,10 +103,18 @@
                 <label><input type="checkbox" class="attribute-checkbox" value="pressure" checked> Pressure</label>
                 <label><input type="checkbox" class="attribute-checkbox" value="humidity" checked> Humidity</label>
             </div>
-        
+            <!-- Leyenda del degradado -->
+            <div class="gradient-legend">
+                <div class="gradient-bar"></div>
+                <div class="legend-labels">
+                    <span>Más Correlación</span>
+                    <span>Menos Correlación</span>
+                </div>
+            </div>
             <div id="tooltip-rad" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
         
             <div id="tree-rad" class="chart"></div>
+            
         </div>
         <!-- GRAFICA PARA MI SERIE TEMPORAL -->
         <div class="chart-container-time-temporal">
