@@ -193,6 +193,7 @@ p {
 
 select, input[type="date"] {
     margin-right: 10px;
+    margin-top: 10px;
     border-radius: 4px;
     border: 1px solid #ccc;
     padding: 5px;
