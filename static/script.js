@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const defaultDate = '2018-01-01'; // Cambia esto a la fecha que desees
+    const defaultDate = '2017-01-01'; // Cambia esto a la fecha que desees
     startDateInput.value = defaultDate; // Establece la fecha de inicio
     endDateInput.value = defaultDate; // Establece la fecha de fin
 
@@ -451,8 +451,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 // GRAFICA PARA MI SERIE TEMPORAL
-
-// Función para actualizar la gráfica de serie temporal
 function updateTimeSeriesChart() {
     const stationId = stationIdSelect.value;
     const startDate = new Date(startDateInput.value);
@@ -494,14 +492,14 @@ function updateTimeSeriesChart() {
         // Limpia el gráfico anterior
         timeTemporalDiv.selectAll('*').remove();
 
-        const width = 1300; // Ancho del gráfico
+        const width = 1200; // Ancho del gráfico
         const height = 360; // Alto del gráfico
+        const margin = { top: 20, right: 30, bottom: 30, left: 50 };
 
         const svg = timeTemporalDiv.append('svg')
             .attr('width', width)
             .attr('height', height);
 
-        const margin = { top: 20, right: 30, bottom: 30, left: 50 };
         const xScale = d3.scaleTime()
             .domain(d3.extent(averagedData, d => d.date))
             .range([margin.left, width - margin.right]);
@@ -509,6 +507,9 @@ function updateTimeSeriesChart() {
         const yScale = d3.scaleLinear()
             .domain([0, d3.max(averagedData, d => d.average)])
             .range([height - margin.bottom, margin.top]);
+
+        // Añadir el fondo de las estaciones
+        addSeasonalBackground(svg, xScale, height, margin);
 
         // Añadir puntos al gráfico
         svg.selectAll('circle')
@@ -573,6 +574,45 @@ function updateTimeSeriesChart() {
         const tooltip = d3.select('#tooltip-time-temporal');
     });
 }
+function addSeasonalBackground(svg, xScale, height, margin) {
+    var seasons = [
+        { name: "Primavera", start: "03-20", end: "06-21", color: "#d0f0c0" },
+        { name: "Verano", start: "06-21", end: "09-22", color: "#f0e68c" },
+        { name: "Otoño", start: "09-22", end: "12-21", color: "#f4a460" },
+        { name: "Invierno", start: "12-21", end: "12-31", color: "#add8e6" },
+        { name: "Invierno", start: "12-31", end: "03-20", color: "#add8e6" }
+    ];
+
+    var yearRange = xScale.domain(); // Obtén el rango de años del gráfico
+    var startYear = yearRange[0].getFullYear();
+    var endYear = yearRange[1].getFullYear();
+
+    for (var year = startYear; year <= endYear; year++) {
+        seasons.forEach(function(season) {
+            var startDate = new Date(year + "-" + season.start);
+            var endDate = new Date(year + "-" + season.end);
+
+            // Ajustar invierno que cruza el año
+            if (season.name === "Invierno" && season.start === "12-21") {
+                endDate = new Date((year + 1) + "-03-20"); // Ajusta la fecha de fin para cubrir hasta el siguiente año
+            } else if (season.name === "Invierno" && season.start === "01-01") {
+                startDate = new Date(year + "-01-01"); // Ajusta el inicio al principio del año
+                endDate = new Date(year + "-03-20"); // Ajusta el fin al 20 de marzo del mismo año
+            }
+
+            // Dibujar solo si las fechas están dentro del rango del gráfico
+            if (startDate <= yearRange[1] && endDate >= yearRange[0]) {
+                svg.append("rect")
+                    .attr("x", xScale(Math.max(startDate, yearRange[0]))) // Comienza desde el inicio del rango o la fecha de inicio de la temporada, lo que sea más reciente
+                    .attr("y", margin.top) // Asegura que el fondo no se extienda más allá del borde superior del gráfico
+                    .attr("width", xScale(Math.min(endDate, yearRange[1])) - xScale(Math.max(startDate, yearRange[0]))) // Calcula el ancho sin superposición
+                    .attr("height", height - margin.top - margin.bottom) // Limita la altura del fondo al área de la gráfica
+                    .attr("fill", season.color)
+                    .attr("opacity", 0.3);
+            }
+        });
+    }
+}
 
 // Inicializar la gráfica de serie temporal con PM2.5 como default
 function initializeChart() {
@@ -582,7 +622,6 @@ function initializeChart() {
     // Actualizar el gráfico
     updateTimeSeriesChart();
 }
-
 // Escuchadores de eventos para la serie temporal
 stationIdSelect.addEventListener('change', updateTimeSeriesChart);
 startDateInput.addEventListener('change', updateTimeSeriesChart);
