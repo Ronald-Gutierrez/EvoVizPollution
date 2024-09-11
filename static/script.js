@@ -2,11 +2,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const stationIdSelect = document.getElementById('stationId');
     const startDateInput = document.getElementById('startDate');
     const endDateInput = document.getElementById('endDate');
+    const contaminantRadios = document.querySelectorAll('input[name="contaminant"]'); // Selección de contaminantes
 
     const pcaChartDiv = d3.select('#pca-chart');
     const tooltipPCA = d3.select('#tooltip-pca');
     const tooltipRAD = d3.select('#tooltip-rad');
-
+    const timeTemporalDiv = d3.select('#time-temporal');
+    const tooltipTimeTemporal = d3.select('#tooltip-time-temporal');
     // Función para eliminar el sufijo '_aq'
     function removeSuffix(text, suffix) {
         if (text.endsWith(suffix)) {
@@ -41,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     endDateInput.value = defaultDate; // Establece la fecha de fin
 
     // Carga el CSV y prepara los datos para el gráfico PCA
-    d3.csv('data/PCA_VIZ_AQI_SIN-DW.csv').then(pcaData => {
+    d3.csv('data/PCA_VIZ_AQI_SIN-DW-FOR-DAY.csv').then(pcaData => {
 
         const aqiColors = {
             1: '#00E400', // Bueno (0-50)
@@ -122,144 +124,178 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Función para calcular la entropía de Shannon por cada atributo individualmente
-function calculateShannonEntropyForAttributes(data, attributes) {
-    return attributes.map(attr => {
-        const attrData = data.map(d => +d[attr] || 0);
-        const sum = d3.sum(attrData);
-        const probabilities = attrData.map(value => value / sum);
-        const attrEntropy = -d3.sum(probabilities.map(p => (p > 0 ? p * Math.log2(p) : 0)));
-        return attrEntropy;
-    });
-}
-
-function drawHierarchicalChart(date, stationId, time) {
-    Promise.all([
-        d3.csv('data/beijing_17_18_aq.csv'),
-        d3.csv('data/beijing_17_18_meo.csv'),
-        d3.csv('data/knn_PCA.csv'),
-        d3.csv('data/hour_aqi_output.csv') // Cargamos el CSV de hora
-    ]).then(([aqData, meoData, knnData, hourData]) => {
-        const filteredAqData = aqData.filter(d => d.date === date && d.stationId === stationId);
-
-        const nearestMeoStation = knnData.find(d => d.aqi_stationId === stationId)?.nearest_meo_stationId;
-        if (!nearestMeoStation) {
-            console.error('No se encontró una estación meteorológica correspondiente.');
-            return;
-        }
-
-        const filteredMeoData = meoData.filter(d => d.date === date && d.stationId === nearestMeoStation);
-
-        if (filteredAqData.length === 0 || filteredMeoData.length === 0) {
-            console.error('No se encontraron datos suficientes para la fecha y estaciones especificadas.');
-            return;
-        }
-
-        const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
-        const meoAttributes = ['temperature', 'pressure', 'humidity'];
-        const attributes = [...aqAttributes, ...meoAttributes];
-        const matrix = [];
-
-        filteredAqData.forEach(row => {
-            const correspondingMeoRow = filteredMeoData.find(d => d.time === row.time);
-            if (correspondingMeoRow) {
-                const aqDataRow = aqAttributes.map(attr => parseFloat(row[attr]) || 0);
-                const meoDataRow = meoAttributes.map(attr => parseFloat(correspondingMeoRow[attr]) || 0);
-                matrix.push([...aqDataRow, ...meoDataRow]);
-            }
-        });
-
-        const correlationMatrix = calculateCorrelationMatrix(matrix);
-        const distanceMatrix = calculateDistanceMatrix(correlationMatrix);
-
-        const root = d3.hierarchy(buildHierarchy(attributes, distanceMatrix), d => d.children);
-        assignRadialLeafPositions(root, attributes.length);
-
-        const cluster = d3.cluster().size([2 * Math.PI, clusterRadius]);
-        cluster(root);
-
-        g.selectAll("*").remove();
-
-        g.selectAll(".link")
-            .data(root.links())
-            .enter().append("path")
-            .attr("class", d => meoAttributes.includes(d.source.data.name) || meoAttributes.includes(d.target.data.name) ? "highlighted-link" : "link")
-            .attr("d", d3.linkRadial()
-                .angle(d => d.x)
-                .radius(d => d.y));
-
-        const colorScale = d3.scaleLinear()
-            .domain([0, d3.max(root.descendants(), d => d.data.distance || 0)])
-            .range(["#FF0000", "#FF9999"]);
-
-        // Aquí calculamos la entropía de Shannon para cada atributo
-        const shannonEntropies = calculateShannonEntropyForAttributes(filteredAqData, aqAttributes);
-
-        const node = g.selectAll(".node")
-            .data(root.descendants())
-            .enter().append("g")
-            .attr("class", "node")
-            .attr("transform", d => `translate(${project(d.x, d.y)})`)
-            node.on("mouseover", function(event, d) {
-                tooltipRAD.style('display', 'block');
-                const node = d3.select(this);
-                const circle = node.select("circle");
-            
-                // Guardar el radio original del círculo
-                const originalRadius = circle.attr("r");
-            
-                // Calcular la entropía para el nodo actual
-                const entropy = calculateShannonEntropyForAttributes(filteredAqData, [d.data.name])[0]; // Asumiendo que d.data.name es el atributo
-                const distance = d.data.distance || 0; // Obtener la distancia del nodo
-            
-                circle.transition()
-                    .duration(300)
-                    .attr("r", d.children ? 10 : entropy * 2) // Tamaño ajustado con la entropía
-                    .style("stroke", "blue")
-                    .style("stroke-width", 2);
-            
-                node.selectAll(".info-label").remove(); // Elimina etiquetas anteriores
-            
-                node.append("text")
-                    .attr("class", "info-label")
-                    .attr("x", 0)
-                    .attr("y", -15)
-                    .attr("text-anchor", "middle")
-                    .text(`Entropía: ${entropy.toFixed(2)}, Distancia: ${distance.toFixed(2)}`); // Muestra la entropía y distancia
-            })
-            .on("mouseout", function(event, d) {
-                const node = d3.select(this);
-                const circle = node.select("circle");
-            
-                // Recuperar el radio original y estilos
-                const originalRadius = d.children ? 6 : shannonEntropies[d.data.index];
-            
-                circle.transition()
-                    .duration(300)
-                    .attr("r", originalRadius) // Tamaño original
-                    .style("stroke", "none")
-                    .style("stroke-width", 0);
-            
-                node.selectAll(".info-label").remove(); // Elimina las etiquetas al salir
+        function calculateShannonEntropyForAttributes(data, attributes) {
+            return attributes.map(attr => {
+                const attrData = data.map(d => +d[attr] || 0);
+                const sum = d3.sum(attrData);
+                const probabilities = attrData.map(value => value / sum);
+                const attrEntropy = -d3.sum(probabilities.map(p => (p > 0 ? p * Math.log2(p) : 0)));
+                return attrEntropy;
             });
-            
+        }
+        function drawHierarchicalChart(date, stationId, time) {
+            Promise.all([
+                d3.csv('data/beijing_17_18_aq.csv'),
+                d3.csv('data/beijing_17_18_meo.csv'),
+                d3.csv('data/knn_PCA.csv'),
+                d3.csv('data/hour_aqi_output.csv') // Cargamos el CSV de hora
+            ]).then(([aqData, meoData, knnData, hourData]) => {
+                const filteredAqData = aqData.filter(d => d.date === date && d.stationId === stationId);
+
+                const nearestMeoStation = knnData.find(d => d.aqi_stationId === stationId)?.nearest_meo_stationId;
+                if (!nearestMeoStation) {
+                    console.error('No se encontró una estación meteorológica correspondiente.');
+                    return;
+                }
+
+                const filteredMeoData = meoData.filter(d => d.date === date && d.stationId === nearestMeoStation);
+
+                if (filteredAqData.length === 0 || filteredMeoData.length === 0) {
+                    console.error('No se encontraron datos suficientes para la fecha y estaciones especificadas.');
+                    return;
+                }
+
+                const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
+                const meoAttributes = ['temperature', 'pressure', 'humidity'];
+                const attributes = [...aqAttributes, ...meoAttributes];
+                const matrix = [];
+
+                filteredAqData.forEach(row => {
+                    const correspondingMeoRow = filteredMeoData.find(d => d.time === row.time);
+                    if (correspondingMeoRow) {
+                        const aqDataRow = aqAttributes.map(attr => parseFloat(row[attr]) || 0);
+                        const meoDataRow = meoAttributes.map(attr => parseFloat(correspondingMeoRow[attr]) || 0);
+                        matrix.push([...aqDataRow, ...meoDataRow]);
+                    }
+                });
+
+                const correlationMatrix = calculateCorrelationMatrix(matrix);
+                const distanceMatrix = calculateDistanceMatrix(correlationMatrix);
+
+                const root = d3.hierarchy(buildHierarchy(attributes, distanceMatrix), d => d.children);
+                assignRadialLeafPositions(root, attributes.length);
+
+                const cluster = d3.cluster().size([2 * Math.PI, clusterRadius]);
+                cluster(root);
+
+                g.selectAll("*").remove();
+
+                g.selectAll(".link")
+                    .data(root.links())
+                    .enter().append("path")
+                    .attr("class", d => meoAttributes.includes(d.source.data.name) || meoAttributes.includes(d.target.data.name) ? "highlighted-link" : "link")
+                    .attr("d", d3.linkRadial()
+                        .angle(d => d.x)
+                        .radius(d => d.y));
+
+                const colorScale = d3.scaleLinear()
+                    .domain([0, d3.max(root.descendants(), d => d.data.distance || 0)])
+                    .range(["#FF0000", "#FF9999"]);
+
+                // Aquí calculamos la entropía de Shannon para cada atributo
+                const shannonEntropies = calculateShannonEntropyForAttributes(filteredAqData, aqAttributes);
+
+                const node = g.selectAll(".node")
+                    .data(root.descendants())
+                    .enter().append("g")
+                    .attr("class", "node")
+                    .attr("transform", d => `translate(${project(d.x, d.y)})`)
+        // Al añadir los nodos al gráfico
         node.append("circle")
-            .attr("r", d => d.children ? 6 : shannonEntropies[d.data.index]) // Tamaño según entropía
+            .attr("r", d => {
+                // Obtiene la entropía del nodo o 0 si es undefined
+                const entropy = shannonEntropies[d.data.index] || 0;
+                // Si el nodo es hoja, el radio inicial es 3 + entropía
+                return d.children ? 4 : (entropy + 3);
+            })
             .style("fill", d => colorScale(d.data.distance || 0));
 
-        node.append("text")
-            .attr("dy", "0.31em")
-            .attr("x", d => d.x < Math.PI === !d.children ? 6 : -6)
-            .style("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
-            .attr("transform", d => {
-                const angle = d.x * 180 / Math.PI;
-                return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
-            })
-            .text(d => d.children ? null : d.data.name);
+        // Evento de hover (mouseover)
+        node.on("mouseover", function(event, d) {
+            tooltipRAD.style('display', 'block');
+            const node = d3.select(this);
+            const circle = node.select("circle");
 
-    }).catch(error => {
-        console.error('Error al cargar los CSV:', error);
-    });
-}
+            // Calcular la entropía para el nodo actual
+            const entropy = shannonEntropies[d.data.index] || 0; // Asegúrate de que la entropía no sea NaN
+            const distance = d.data.distance || 0;
+
+            // Aumentar el tamaño del círculo en el hover
+            circle.transition()
+                .duration(300)
+                .attr("r", d.children ? 10 : (entropy === 0 ? 3 : entropy + 3)) // Nodo hoja con entropía 0 regresa a 3
+                .style("stroke", "blue")
+                .style("stroke-width", 2);
+
+            // Mostrar la entropía y la distancia en líneas separadas
+            node.selectAll(".info-label").remove(); // Elimina etiquetas anteriores
+            node.append("text")
+                .attr("class", "info-label")
+                .attr("x", 0)
+                .attr("y", -15)
+                .attr("text-anchor", "middle")
+                .text(`Entropía: ${entropy.toFixed(2)}`);
+            
+            node.append("text")
+                .attr("class", "info-label")
+                .attr("x", 0)
+                .attr("y", -30)
+                .attr("text-anchor", "middle")
+                .text(`Distancia: ${distance.toFixed(2)}`); 
+        })
+        .on("mouseout", function(event, d) {
+            const node = d3.select(this);
+            const circle = node.select("circle");
+
+            // Recuperar el tamaño original del círculo
+            const originalRadius = d.children ? 6 : (shannonEntropies[d.data.index] || 0) + 3; // Radio inicial del nodo
+
+            circle.transition()
+                .duration(300)
+                .attr("r", originalRadius) // Mantiene el tamaño original para entropía 0
+                .style("stroke", "none")
+                .style("stroke-width", 0);
+
+            // Eliminar las etiquetas al salir
+            node.selectAll(".info-label").remove();
+        })
+        .on("click", function(event, d) {
+            // Calcular la entropía para el nodo actual
+            const entropy = shannonEntropies[d.data.index] || 0;
+            
+            // Obtener los datos necesarios (distancia, entropía, fecha, hora y stationId)
+            const distance = d.data.distance || 0;
+            const nodeData = d.data; // Datos del nodo actual
+            const stationId = stationIdSelect.value; // ID de la estación seleccionada
+            const date = startDateInput.value; // Fecha seleccionada
+            const time = "00:00"; // La hora puede ser ajustada según tu implementación
+
+            // Imprimir en consola los datos del nodo, incluyendo distancia, entropía, fecha, hora y stationId
+            console.log(`Datos del nodo:
+                Nombre: ${nodeData.name},
+                Distancia: ${distance.toFixed(2)},
+                Entropía: ${entropy.toFixed(2)},
+                Fecha: ${date},
+                Hora: ${time},
+                Station ID: ${stationId}`);
+        });
+
+
+        node.append("text")
+        .attr("dy", "0.31em")
+        .attr("x", d => d.x < Math.PI === !d.children ? 10 : -10) // Aumenta el desplazamiento a 10
+        .style("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
+        .attr("transform", d => {
+            const angle = d.x * 180 / Math.PI;
+            return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
+        })
+        .text(d => d.children ? null : d.data.name);
+
+            }).catch(error => {
+                console.error('Error al cargar los CSV:', error);
+            });
+        }
+
 
 
         const width = 600;
@@ -413,5 +449,151 @@ function drawHierarchicalChart(date, stationId, time) {
         // Inicializa el gráfico PCA
         updatePCAChart();
     });
+
+// GRAFICA PARA MI SERIE TEMPORAL
+
+// Función para actualizar la gráfica de serie temporal
+function updateTimeSeriesChart() {
+    const stationId = stationIdSelect.value;
+    const startDate = new Date(startDateInput.value);
+    const endDate = new Date(endDateInput.value);
+    const selectedContaminant = document.querySelector('input[name="contaminant"]:checked').value; // Contaminante seleccionado
+
+    // Cargar los datos necesarios para la serie temporal
+    Promise.all([
+        d3.csv('data/beijing_17_18_aq.csv'),
+        d3.csv('data/beijing_17_18_meo.csv')
+    ]).then(([aqData, meoData]) => {
+        // Filtrar los datos según la estación y el rango de fechas
+        const filteredAqData = aqData.filter(d => {
+            const date = new Date(d.date);
+            return d.stationId === stationId && date >= startDate && date <= endDate;
+        });
+
+        const filteredMeoData = meoData.filter(d => {
+            const date = new Date(d.date);
+            return d.stationId === stationId && date >= startDate && date <= endDate;
+        });
+
+        // Combinar AQI y datos meteorológicos por fecha y hora
+        const mergedData = filteredAqData.map(d => {
+            const meoRecord = filteredMeoData.find(m => m.date === d.date && m.time === d.time);
+            return { ...d, ...meoRecord };
+        });
+
+        // Agrupar los datos por fecha y calcular el promedio del contaminante seleccionado
+        const dailyData = d3.group(mergedData, d => d.date);
+        const averagedData = Array.from(dailyData, ([date, values]) => {
+            const average = d3.mean(values, d => +d[selectedContaminant]);
+            return { date: new Date(date), average, stationId: values[0].stationId }; // Agregar stationId
+        });
+
+        // Calcular el promedio global del contaminante
+        const overallAverage = d3.mean(averagedData, d => d.average);
+
+        // Limpia el gráfico anterior
+        timeTemporalDiv.selectAll('*').remove();
+
+        const width = 1300; // Ancho del gráfico
+        const height = 360; // Alto del gráfico
+
+        const svg = timeTemporalDiv.append('svg')
+            .attr('width', width)
+            .attr('height', height);
+
+        const margin = { top: 20, right: 30, bottom: 30, left: 50 };
+        const xScale = d3.scaleTime()
+            .domain(d3.extent(averagedData, d => d.date))
+            .range([margin.left, width - margin.right]);
+
+        const yScale = d3.scaleLinear()
+            .domain([0, d3.max(averagedData, d => d.average)])
+            .range([height - margin.bottom, margin.top]);
+
+        // Añadir puntos al gráfico
+        svg.selectAll('circle')
+            .data(averagedData)
+            .enter()
+            .append('circle')
+            .attr('cx', d => xScale(d.date))
+            .attr('cy', d => yScale(d.average))
+            .attr('r', 4) // Radio del círculo
+            .attr('fill', 'steelblue')
+            .on('mouseover', function(event, d) {
+                // Mostrar tooltip
+                tooltip.style('display', 'inline');
+                tooltip.html(`Station ID: ${d.stationId}<br>Date: ${d.date.toISOString().split('T')[0]}<br>${selectedContaminant}: ${d.average}`);
+
+                // Posicionar el tooltip en el punto
+                const [x, y] = d3.pointer(event);
+                tooltip
+                    .style('left', `${x + margin.left}px`)
+                    .style('top', `${y + margin.top - 40}px`);
+
+                // Cambiar color del punto al pasar el mouse
+                d3.select(this).attr('fill', 'orange');
+            })
+            .on('mousemove', function(event) {
+                // Mantener el tooltip en el punto
+                const [x, y] = d3.pointer(event);
+                tooltip
+                    .style('left', `${x + margin.left}px`)
+                    .style('top', `${y + margin.top - 40}px`);
+            })
+            .on('mouseout', function() {
+                // Ocultar tooltip y restaurar color del punto
+                tooltip.style('display', 'none');
+                d3.select(this).attr('fill', 'steelblue');
+            })
+            .on('click', function(event, d) {
+                console.log(`Station ID: ${d.stationId}, Date: ${d.date.toISOString().split('T')[0]}, ${selectedContaminant}: ${d.average}`);
+            });
+
+        // Añadir el eje X
+        svg.append('g')
+            .attr('transform', `translate(0,${height - margin.bottom})`)
+            .call(d3.axisBottom(xScale).tickFormat(d3.timeFormat('%Y-%m-%d')));
+
+        // Añadir el eje Y
+        svg.append('g')
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(yScale));
+
+        // Crear la línea de promedio
+        svg.append('line')
+            .attr('x1', margin.left)
+            .attr('x2', width - margin.right)
+            .attr('y1', yScale(overallAverage))
+            .attr('y2', yScale(overallAverage))
+            .attr('stroke', 'red')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '4,4');
+
+        // Crear el tooltip
+        const tooltip = d3.select('#tooltip-time-temporal');
+    });
+}
+
+// Inicializar la gráfica de serie temporal con PM2.5 como default
+function initializeChart() {
+    // Marcar el radio de PM2.5 como seleccionado
+    document.querySelector('input[name="contaminant"][value="PM2_5"]').checked = true;
+
+    // Actualizar el gráfico
+    updateTimeSeriesChart();
+}
+
+// Escuchadores de eventos para la serie temporal
+stationIdSelect.addEventListener('change', updateTimeSeriesChart);
+startDateInput.addEventListener('change', updateTimeSeriesChart);
+endDateInput.addEventListener('change', updateTimeSeriesChart);
+
+// Escuchadores de eventos para la selección de contaminantes
+contaminantRadios.forEach(radio => {
+    radio.addEventListener('change', updateTimeSeriesChart);
+});
+
+// Inicializar la gráfica de serie temporal al cargar la página
+window.addEventListener('load', initializeChart);
 
 });
