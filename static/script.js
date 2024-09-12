@@ -460,8 +460,9 @@ function updateTimeSeriesChart() {
     // Cargar los datos necesarios para la serie temporal
     Promise.all([
         d3.csv('data/beijing_17_18_aq.csv'),
-        d3.csv('data/beijing_17_18_meo.csv')
-    ]).then(([aqData, meoData]) => {
+        d3.csv('data/beijing_17_18_meo.csv'),
+        d3.csv('data/daily_aqi_output.csv') // Nuevo archivo CSV
+    ]).then(([aqData, meoData, aqiOutputData]) => {
         // Filtrar los datos según la estación y el rango de fechas
         const filteredAqData = aqData.filter(d => {
             const date = new Date(d.date);
@@ -473,7 +474,13 @@ function updateTimeSeriesChart() {
             return d.stationId === stationId && date >= startDate && date <= endDate;
         });
 
-        // Combinar AQI y datos meteorológicos por fecha y hora
+        // Filtrar los datos de AQI
+        const filteredAqiOutputData = aqiOutputData.filter(d => {
+            const date = new Date(d.date);
+            return d.stationId === stationId && date >= startDate && date <= endDate;
+        });
+
+        // Combinar AQI, datos meteorológicos y datos de AQI por fecha y hora
         const mergedData = filteredAqData.map(d => {
             const meoRecord = filteredMeoData.find(m => m.date === d.date && m.time === d.time);
             return { ...d, ...meoRecord };
@@ -506,10 +513,21 @@ function updateTimeSeriesChart() {
 
         const yScale = d3.scaleLinear()
             .domain([0, d3.max(averagedData, d => d.average)])
+            .nice() // Ensure the y-axis range is rounded
             .range([height - margin.bottom, margin.top]);
 
         // Añadir el fondo de las estaciones
         addSeasonalBackground(svg, xScale, height, margin);
+
+        // Definir los colores según el nivel de AQI
+        const aqiColors = {
+            1: '#00E400', // Bueno (0-50)
+            2: '#FFFF00', // Moderado (51-100)
+            3: '#FF7E00', // Insalubre para grupos sensibles (101-150)
+            4: '#FF0000', // Insalubres (151-200)
+            5: '#800080', // Muy insalubre (201-300)
+            6: '#800000'  // Peligroso (301 en adelante)
+        };
 
         // Añadir puntos al gráfico
         svg.selectAll('circle')
@@ -519,7 +537,12 @@ function updateTimeSeriesChart() {
             .attr('cx', d => xScale(d.date))
             .attr('cy', d => yScale(d.average))
             .attr('r', 4) // Radio del círculo
-            .attr('fill', 'steelblue')
+            .attr('fill', d => {
+                // Encontrar el color del AQI para la fecha y estación correspondientes
+                const aqiRecord = aqiOutputData.find(a => a.date === d.date.toISOString().split('T')[0] && a.stationId === d.stationId);
+                return aqiRecord ? aqiColors[aqiRecord[selectedContaminant]] : 'steelblue'; // Usar color por defecto si no hay registro de AQI
+            })
+            .attr('stroke', 'none') // Inicialmente sin borde
             .on('mouseover', function(event, d) {
                 // Mostrar tooltip
                 tooltip.style('display', 'inline');
@@ -531,8 +554,11 @@ function updateTimeSeriesChart() {
                     .style('left', `${x + margin.left}px`)
                     .style('top', `${y + margin.top - 40}px`);
 
-                // Cambiar color del punto al pasar el mouse
-                d3.select(this).attr('fill', 'orange');
+                // Cambiar tamaño y agregar borde al pasar el mouse
+                d3.select(this)
+                    .attr('r', 8) // Aumentar el radio del círculo
+                    .attr('stroke', 'blue') // Agregar borde azul
+                    .attr('stroke-width', 2); // Ancho del borde
             })
             .on('mousemove', function(event) {
                 // Mantener el tooltip en el punto
@@ -541,14 +567,18 @@ function updateTimeSeriesChart() {
                     .style('left', `${x + margin.left}px`)
                     .style('top', `${y + margin.top - 40}px`);
             })
-            .on('mouseout', function() {
-                // Ocultar tooltip y restaurar color del punto
+            .on('mouseout', function(event, d) {
+                // Ocultar tooltip y restaurar tamaño y color del punto
                 tooltip.style('display', 'none');
-                d3.select(this).attr('fill', 'steelblue');
+                const aqiRecord = aqiOutputData.find(a => a.date === d.date.toISOString().split('T')[0] && a.stationId === d.stationId);
+                d3.select(this)
+                    .attr('r', 4) // Restaurar el radio original
+                    .attr('stroke', 'none'); // Eliminar el borde
             })
             .on('click', function(event, d) {
                 console.log(`Station ID: ${d.stationId}, Date: ${d.date.toISOString().split('T')[0]}, ${selectedContaminant}: ${d.average}`);
             });
+
 
         // Añadir el eje X
         svg.append('g')
@@ -574,6 +604,8 @@ function updateTimeSeriesChart() {
         const tooltip = d3.select('#tooltip-time-temporal');
     });
 }
+
+
 function addSeasonalBackground(svg, xScale, height, margin) {
     var seasons = [
         { name: "Primavera", start: "03-20", end: "06-21", color: "#d0f0c0" },
