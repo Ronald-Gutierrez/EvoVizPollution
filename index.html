@@ -84,10 +84,20 @@
         <div class="chart-container-pca">
             <div class="chart-header-pca">
                 <h2>Evolución Espacial</h2>
+                <div class="legend-pca">
+                    <div class="legend-item-pca" style="background-color: #00E400;">Bueno</div>
+                    <div class="legend-item-pca" style="background-color: #FFFF00;">Moderado</div>
+                    <div class="legend-item-pca" style="background-color: #FF7E00;">Insalubre</div>
+                    <div class="legend-item-pca" style="background-color: #FF0000;">Muy Insalubre</div>
+                    <div class="legend-item-pca" style="background-color: #800080;">Malo</div>
+                    <div class="legend-item-pca" style="background-color: #800000;">Severo</div>
+                </div>
             </div>
             <div id="tooltip-pca" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
             <div id="pca-chart" class="chart"></div> <!-- Div para el gráfico PCA -->
         </div>
+        
+        
         <div class="chart-container-tree-rad">
             <div class="chart-header-tree-rad">
                 <h2>Árbol Jerárquico Radial</h2>

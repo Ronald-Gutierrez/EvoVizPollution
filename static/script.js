@@ -611,39 +611,52 @@ function addSeasonalBackground(svg, xScale, height, margin) {
         { name: "Primavera", start: "03-20", end: "06-21", color: "#d0f0c0" },
         { name: "Verano", start: "06-21", end: "09-22", color: "#f0e68c" },
         { name: "Otoño", start: "09-22", end: "12-21", color: "#f4a460" },
-        { name: "Invierno", start: "12-21", end: "12-31", color: "#add8e6" },
-        { name: "Invierno", start: "12-31", end: "03-20", color: "#add8e6" }
+        { name: "Invierno", start: "12-21", end: "03-20", color: "#add8e6" },
     ];
 
     var yearRange = xScale.domain(); // Obtén el rango de años del gráfico
     var startYear = yearRange[0].getFullYear();
     var endYear = yearRange[1].getFullYear();
 
-    for (var year = startYear; year <= endYear; year++) {
-        seasons.forEach(function(season) {
+    seasons.forEach(function(season) {
+        for (var year = startYear; year <= endYear; year++) {
             var startDate = new Date(year + "-" + season.start);
             var endDate = new Date(year + "-" + season.end);
 
             // Ajustar invierno que cruza el año
             if (season.name === "Invierno" && season.start === "12-21") {
                 endDate = new Date((year + 1) + "-03-20"); // Ajusta la fecha de fin para cubrir hasta el siguiente año
-            } else if (season.name === "Invierno" && season.start === "01-01") {
-                startDate = new Date(year + "-01-01"); // Ajusta el inicio al principio del año
-                endDate = new Date(year + "-03-20"); // Ajusta el fin al 20 de marzo del mismo año
+            }
+
+            // Ajustar fecha de inicio para invierno que cubre el principio del año siguiente
+            if (season.name === "Invierno" && season.start === "01-01") {
+                startDate = new Date(year + "-01-01");
+                endDate = new Date(year + "-03-20");
+            }
+
+            // Asegurarse de que endDate se ajuste al año siguiente si es invierno
+            if (season.name === "Invierno" && season.end === "03-20" && endDate < startDate) {
+                endDate = new Date((year + 1) + "-03-20");
             }
 
             // Dibujar solo si las fechas están dentro del rango del gráfico
             if (startDate <= yearRange[1] && endDate >= yearRange[0]) {
-                svg.append("rect")
-                    .attr("x", xScale(Math.max(startDate, yearRange[0]))) // Comienza desde el inicio del rango o la fecha de inicio de la temporada, lo que sea más reciente
-                    .attr("y", margin.top) // Asegura que el fondo no se extienda más allá del borde superior del gráfico
-                    .attr("width", xScale(Math.min(endDate, yearRange[1])) - xScale(Math.max(startDate, yearRange[0]))) // Calcula el ancho sin superposición
-                    .attr("height", height - margin.top - margin.bottom) // Limita la altura del fondo al área de la gráfica
-                    .attr("fill", season.color)
-                    .attr("opacity", 0.3);
+                var xStart = xScale(Math.max(startDate, yearRange[0]));
+                var xEnd = xScale(Math.min(endDate, yearRange[1]));
+
+                // Asegúrate de no dibujar un rectángulo con un ancho negativo
+                if (xEnd > xStart) {
+                    svg.append("rect")
+                        .attr("x", xStart)
+                        .attr("y", margin.top)
+                        .attr("width", xEnd - xStart)
+                        .attr("height", height - margin.top - margin.bottom)
+                        .attr("fill", season.color)
+                        .attr("opacity", 0.3);
+                }
             }
-        });
-    }
+        }
+    });
 }
 
 // Inicializar la gráfica de serie temporal con PM2.5 como default

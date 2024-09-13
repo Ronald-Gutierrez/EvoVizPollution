@@ -6,7 +6,7 @@ body {
     font-family: 'Fornite', sans-serif;
     font-weight: 100; /* Cambia el peso de la fuente a más delgada */
     background-color: #f0f0f0;
-    color: #525151;
+    color: rgb(46, 42, 42);
     margin: 0;
     padding: 0;
 }
@@ -107,7 +107,7 @@ p {
     border: 1px solid #ccc; /* Borde de la ventana */
     border-radius: 10px; /* Bordes redondeados */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra de la ventana */
-    background-color: #f9f9f9; /* Fondo del contenedor */
+    background: #8ab0ff;
     overflow: hidden; /* Oculta el contenido desbordado */
     display: flex;
     flex-direction: column; /* Coloca el título encima del gráfico */
@@ -350,3 +350,30 @@ button:hover {
     background-repeat: repeat-x;
     margin-right: 10px;
 }
+.chart-header-pca {
+    position: relative;
+    width: 100%; /* Asegura que el contenedor de la leyenda use todo el ancho disponible */
+}
+
+.legend-pca {
+    display: flex;
+    justify-content: flex-start; /* Alinea los elementos al principio del contenedor */
+    align-items: center;
+    flex-wrap: nowrap; /* Asegura que los elementos no se envuelvan en varias líneas */
+    margin-top: 10px;
+    overflow-x: auto; /* Permite desplazamiento horizontal si el contenido excede el ancho del contenedor */
+    padding: 0px 0; /* Padding para la leyenda */
+    box-sizing: border-box; /* Incluye padding en el tamaño total del contenedor */
+    margin-left: 35px;
+}
+
+.legend-item-pca {
+    padding: 5px 15px;
+    color: rgb(0, 0, 0);
+    font-weight: bold;
+    margin-right: 5px; /* Espaciado entre ítems */
+    border-radius: 2px;
+    text-align: center;
+    white-space: nowrap; /* Evita que el texto se divida en varias líneas */
+}
+
