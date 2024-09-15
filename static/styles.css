@@ -107,7 +107,7 @@ p {
     border: 1px solid #ccc; /* Borde de la ventana */
     border-radius: 10px; /* Bordes redondeados */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra de la ventana */
-    background: #8ab0ff;
+    background: #e4e7ec;
     overflow: hidden; /* Oculta el contenido desbordado */
     display: flex;
     flex-direction: column; /* Coloca el título encima del gráfico */
