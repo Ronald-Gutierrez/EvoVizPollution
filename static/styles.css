@@ -307,8 +307,8 @@ button:hover {
     margin: 0 10px; /* Espaciado a los lados */
 }
 
-.legend-label {
-    font-size: 14px;
+.legend-label-rad {
+    font-size: 24px; /* 10% del ancho de la ventana de visualización */
     color: #333;
 }
 
