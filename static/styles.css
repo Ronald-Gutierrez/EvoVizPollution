@@ -281,30 +281,37 @@ button:hover {
     right: 10px;  
     display: flex;
     flex-direction: column;
-    align-items: flex-end; 
+    align-items: center; 
     background: rgba(255, 255, 255, 0); 
     padding: 10px;
     box-sizing: border-box;
 }
 
+.legend-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.gradient-container {
+    display: flex;
+    align-items: center;
+    width: 100px; /* Ajusta según sea necesario */
+}
+
 .gradient-bar {
-    width: 200px;
-    height: 20px;
+    width: 80px;
+    height: 15px;
     background: linear-gradient(to right, #ff0000, #ffaaaa);
     border: 1px solid #ccc;
-    margin-bottom: 5px;
+    margin: 0 10px; /* Espaciado a los lados */
 }
 
-.legend-labels {
-    display: flex;
-    justify-content: space-between;
-    width: 200px;
-}
-
-.legend-labels span {
+.legend-label {
     font-size: 14px;
     color: #333;
 }
+
 
 
 /* SERIE TEMPORAL */
@@ -377,3 +384,17 @@ button:hover {
     white-space: nowrap; /* Evita que el texto se divida en varias líneas */
 }
 
+#chart-info {
+    display: auto; /* Usa flexbox para alinear los elementos en una fila */
+    align-items: center; /* Alinea verticalmente los elementos en el centro */
+    justify-content: flex-start; /* Alinea los elementos al principio del contenedor */
+    margin-bottom: 10px; /* Espacio entre el contenedor de información y el gráfico */
+    padding: 10px; /* Espaciado interno del contenedor */
+    position: absolute; /* Posición absoluta para mover el contenedor hacia arriba */
+    top: 30px; /* Ajusta la posición desde el borde superior */
+    left: 10px; /* Ajusta la posición desde el borde izquierdo */
+    right: 10px; /* Ajusta la posición desde el borde derecho */
+    font-size: 80px; /* Tamaño de la fuente en el contenedor */
+    z-index: 10; /* Asegura que el contenedor esté por encima de otros elementos */
+    gap: 5px; /* Espacio entre los elementos de texto */
+}

@@ -87,7 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 .domain(d3.extent(filteredData, d => +d.PC2))
                 .range([height - 50, 50]);
 
-            // Añadir puntos
+          // Variable para almacenar el punto seleccionado
+            let selectedPoint = null;
+
             g.selectAll('circle')
                 .data(filteredData)
                 .enter().append('circle')
@@ -96,6 +98,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .attr('r', 6)
                 .attr('fill', d => aqiColors[d.AQI]) // Asigna el color basado en el valor de AQI
                 .on('mouseover', function(event, d) {
+                    if (d !== selectedPoint) { // Solo cambia el estilo si el punto no está seleccionado
+                        d3.select(this).transition().attr('r', 12) // Aumenta el radio al pasar el mouse
+                            .style('stroke', 'blue') // Establece el color del borde como azul
+                            .style('stroke-width', '3px'); // Establece el ancho del borde
+                    }
+                    
                     const [x, y] = d3.pointer(event, pcaSvg.node());
 
                     tooltipPCA.style('display', 'block')
@@ -104,23 +112,42 @@ document.addEventListener('DOMContentLoaded', () => {
                         .style('top', `${y - 28}px`);
                 })
                 .on('mousemove', function(event) {
-                    const [x, y] = d3.pointer(event, pcaSvg.node());
-                    d3.select(this).transition().attr('r', 10) // Aumenta el radio al pasar el mouse
-                        .style('stroke', 'red') // Establece el color del borde como rojo
-                        .style('stroke-width', '2px'); // Establece el ancho del borde
-                    tooltipPCA.style('left', `${x + 5}px`)
-                        .style('top', `${y - 28}px`);
+                    if (d3.select(this).datum() !== selectedPoint) { // Solo cambia el estilo si el punto no está seleccionado
+                        const [x, y] = d3.pointer(event, pcaSvg.node());
+                        d3.select(this).transition().attr('r', 12) // Aumenta el radio al pasar el mouse
+                            .style('stroke', 'blue') // Establece el color del borde como azul
+                            .style('stroke-width', '3px'); // Establece el ancho del borde
+                        tooltipPCA.style('left', `${x + 5}px`)
+                            .style('top', `${y - 28}px`);
+                    }
                 })
                 .on('mouseout', function() {
+                    if (d3.select(this).datum() !== selectedPoint) { // Solo cambia el estilo si el punto no está seleccionado
+                        d3.select(this).transition().attr('r', 6) // Restaura el radio al salir el mouse
+                            .style('stroke', 'none'); // Elimina el borde
+                    }
                     tooltipPCA.style('display', 'none');
-                    d3.select(this).transition().attr('r', 6) // Aumenta el radio al pasar el mouse
-                        .style('stroke', 'none'); // Elimina el borde
                 })
-                // Evento de clic en el gráfico PCA
                 .on('click', function(event, d) {
+                    // Restaura el estilo del punto previamente seleccionado
+                    if (selectedPoint) {
+                        d3.selectAll('circle')
+                            .filter(point => point === selectedPoint)
+                            .transition().attr('r', 6)
+                            .style('stroke', 'none');
+                    }
+
+                    // Selecciona el nuevo punto
+                    selectedPoint = d;
+                    
+                    d3.select(this).transition().attr('r', 12) // Aumenta el radio al hacer clic
+                        .style('stroke', 'blue') // Establece el color del borde como azul
+                        .style('stroke-width', '3px'); // Establece el ancho del borde
+                    
                     console.log(`Fecha: ${d.date}, Hora: ${d.time}, PC1: ${d.PC1}, PC2: ${d.PC2}, AQI: ${d.AQI}, Station ID: ${d.stationId}`);
                     drawHierarchicalChart(d.date, d.stationId, d.time); // Llama a la función para dibujar el dendograma
                 });
+
         }
 
         // Función para calcular la entropía de Shannon por cada atributo individualmente
@@ -141,25 +168,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 d3.csv('data/hour_aqi_output.csv') // Cargamos el CSV de hora
             ]).then(([aqData, meoData, knnData, hourData]) => {
                 const filteredAqData = aqData.filter(d => d.date === date && d.stationId === stationId);
+                // Actualiza la información en el HTML
+                // document.getElementById('station-id').textContent = stationId;
+                function formatDate(dateString) {
+                    const [year, month, day] = dateString.split('-');
+                    return `${day}-${month}-${year}`;
+                }
+                const formattedDate = formatDate(date);
 
+                document.getElementById('selected-date').textContent = formattedDate;
+        
                 const nearestMeoStation = knnData.find(d => d.aqi_stationId === stationId)?.nearest_meo_stationId;
                 if (!nearestMeoStation) {
                     console.error('No se encontró una estación meteorológica correspondiente.');
                     return;
                 }
-
+        
                 const filteredMeoData = meoData.filter(d => d.date === date && d.stationId === nearestMeoStation);
-
+        
                 if (filteredAqData.length === 0 || filteredMeoData.length === 0) {
                     console.error('No se encontraron datos suficientes para la fecha y estaciones especificadas.');
                     return;
                 }
-
+        
                 const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
                 const meoAttributes = ['temperature', 'pressure', 'humidity'];
                 const attributes = [...aqAttributes, ...meoAttributes];
                 const matrix = [];
-
+        
                 filteredAqData.forEach(row => {
                     const correspondingMeoRow = filteredMeoData.find(d => d.time === row.time);
                     if (correspondingMeoRow) {
@@ -168,18 +204,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         matrix.push([...aqDataRow, ...meoDataRow]);
                     }
                 });
-
+        
                 const correlationMatrix = calculateCorrelationMatrix(matrix);
                 const distanceMatrix = calculateDistanceMatrix(correlationMatrix);
-
+        
                 const root = d3.hierarchy(buildHierarchy(attributes, distanceMatrix), d => d.children);
                 assignRadialLeafPositions(root, attributes.length);
-
+        
                 const cluster = d3.cluster().size([2 * Math.PI, clusterRadius]);
                 cluster(root);
-
+        
                 g.selectAll("*").remove();
-
+        
                 g.selectAll(".link")
                     .data(root.links())
                     .enter().append("path")
@@ -187,114 +223,141 @@ document.addEventListener('DOMContentLoaded', () => {
                     .attr("d", d3.linkRadial()
                         .angle(d => d.x)
                         .radius(d => d.y));
-
+        
                 const colorScale = d3.scaleLinear()
                     .domain([0, d3.max(root.descendants(), d => d.data.distance || 0)])
                     .range(["#FF0000", "#FF9999"]);
-
-                // Aquí calculamos la entropía de Shannon para cada atributo
+        
                 const shannonEntropies = calculateShannonEntropyForAttributes(filteredAqData, aqAttributes);
-
+        
                 const node = g.selectAll(".node")
                     .data(root.descendants())
                     .enter().append("g")
                     .attr("class", "node")
-                    .attr("transform", d => `translate(${project(d.x, d.y)})`)
-        // Al añadir los nodos al gráfico
-        node.append("circle")
-            .attr("r", d => {
-                // Obtiene la entropía del nodo o 0 si es undefined
-                const entropy = shannonEntropies[d.data.index] || 0;
-                // Si el nodo es hoja, el radio inicial es 3 + entropía
-                return d.children ? 4 : (entropy + 3);
-            })
-            .style("fill", d => colorScale(d.data.distance || 0));
-
-        // Evento de hover (mouseover)
-        node.on("mouseover", function(event, d) {
-            tooltipRAD.style('display', 'block');
-            const node = d3.select(this);
-            const circle = node.select("circle");
-
-            // Calcular la entropía para el nodo actual
-            const entropy = shannonEntropies[d.data.index] || 0; // Asegúrate de que la entropía no sea NaN
-            const distance = d.data.distance || 0;
-
-            // Aumentar el tamaño del círculo en el hover
-            circle.transition()
-                .duration(300)
-                .attr("r", d.children ? 10 : (entropy === 0 ? 3 : entropy + 3)) // Nodo hoja con entropía 0 regresa a 3
-                .style("stroke", "blue")
-                .style("stroke-width", 2);
-
-            // Mostrar la entropía y la distancia en líneas separadas
-            node.selectAll(".info-label").remove(); // Elimina etiquetas anteriores
-            node.append("text")
-                .attr("class", "info-label")
-                .attr("x", 0)
-                .attr("y", -15)
-                .attr("text-anchor", "middle")
-                .text(`Entropía: ${entropy.toFixed(2)}`);
-            
-            node.append("text")
-                .attr("class", "info-label")
-                .attr("x", 0)
-                .attr("y", -30)
-                .attr("text-anchor", "middle")
-                .text(`Distancia: ${distance.toFixed(2)}`); 
-        })
-        .on("mouseout", function(event, d) {
-            const node = d3.select(this);
-            const circle = node.select("circle");
-
-            // Recuperar el tamaño original del círculo
-            const originalRadius = d.children ? 6 : (shannonEntropies[d.data.index] || 0) + 3; // Radio inicial del nodo
-
-            circle.transition()
-                .duration(300)
-                .attr("r", originalRadius) // Mantiene el tamaño original para entropía 0
-                .style("stroke", "none")
-                .style("stroke-width", 0);
-
-            // Eliminar las etiquetas al salir
-            node.selectAll(".info-label").remove();
-        })
-        .on("click", function(event, d) {
-            // Calcular la entropía para el nodo actual
-            const entropy = shannonEntropies[d.data.index] || 0;
-            
-            // Obtener los datos necesarios (distancia, entropía, fecha, hora y stationId)
-            const distance = d.data.distance || 0;
-            const nodeData = d.data; // Datos del nodo actual
-            const stationId = stationIdSelect.value; // ID de la estación seleccionada
-            const date = startDateInput.value; // Fecha seleccionada
-            const time = "00:00"; // La hora puede ser ajustada según tu implementación
-
-            // Imprimir en consola los datos del nodo, incluyendo distancia, entropía, fecha, hora y stationId
-            console.log(`Datos del nodo:
-                Nombre: ${nodeData.name},
-                Distancia: ${distance.toFixed(2)},
-                Entropía: ${entropy.toFixed(2)},
-                Fecha: ${date},
-                Hora: ${time},
-                Station ID: ${stationId}`);
-        });
-
-
-        node.append("text")
-        .attr("dy", "0.31em")
-        .attr("x", d => d.x < Math.PI === !d.children ? 10 : -10) // Aumenta el desplazamiento a 10
-        .style("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
-        .attr("transform", d => {
-            const angle = d.x * 180 / Math.PI;
-            return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
-        })
-        .text(d => d.children ? null : d.data.name);
-
+                    .attr("transform", d => `translate(${project(d.x, d.y)})`);
+        
+                // Al añadir los nodos al gráfico
+                node.append("circle")
+                    .attr("r", d => {
+                        const entropy = shannonEntropies[d.data.index] || 0;
+                        return d.children ? 4 : (entropy + 3);
+                    })
+                    .style("fill", d => colorScale(d.data.distance || 0));
+        
+                // Añadir un triángulo invertido al nodo central
+                node.filter(d => !d.parent)  // Filtramos el nodo central (raíz)
+                    .append("polygon")
+                    .attr("points", function() {
+                        // Definir el tamaño y las coordenadas del triángulo invertido
+                        const triangleSize = 13; // Tamaño del triángulo
+                        const x1 = 0, y1 = triangleSize;       // Punto inferior (vértice abajo)
+                        const x2 = triangleSize / 2, y2 = 0;   // Punto superior derecho
+                        const x3 = -triangleSize / 2, y3 = 0;  // Punto superior izquierdo
+                        return `${x1},${y1} ${x2},${y2} ${x3},${y3}`;
+                    })
+                    .attr("fill", "black") // Color del triángulo
+                    .attr("transform", "translate(0, -20)") // Ajustar la posición del triángulo encima del círculo
+                    .style("pointer-events", "none"); // Ignorar eventos del ratón sobre el triángulo
+        
+                // Eventos de hover (mouseover) y click tal como los tienes definidos...
+                node.on("mouseover", function(event, d) {
+                    tooltipRAD.style('display', 'block');
+                    const node = d3.select(this);
+                    const circle = node.select("circle");
+        
+                    const entropy = shannonEntropies[d.data.index] || 0; // Calcular la entropía para el nodo actual
+                    const distance = d.data.distance || 0;
+        
+                    circle.transition()
+                        .duration(300)
+                        .attr("r", d.children ? 10 : (entropy === 0 ? 3 : entropy + 3))
+                        .style("stroke", "blue")
+                        .style("stroke-width", 2);
+        
+                    node.selectAll(".info-label").remove(); // Elimina etiquetas anteriores
+                    node.append("text")
+                        .attr("class", "info-label")
+                        .attr("x", 0)
+                        .attr("y", -15)
+                        .attr("text-anchor", "middle")
+                        .text(`Entropía: ${entropy.toFixed(2)}`);
+                    
+                    node.append("text")
+                        .attr("class", "info-label")
+                        .attr("x", 0)
+                        .attr("y", -30)
+                        .attr("text-anchor", "middle")
+                        .text(`Distancia: ${distance.toFixed(2)}`); 
+                })
+                .on("mouseout", function(event, d) {
+                    const node = d3.select(this);
+                    const circle = node.select("circle");
+        
+                    const originalRadius = d.children ? 6 : (shannonEntropies[d.data.index] || 0) + 3;
+        
+                    circle.transition()
+                        .duration(300)
+                        .attr("r", originalRadius)
+                        .style("stroke", "none")
+                        .style("stroke-width", 0);
+        
+                    node.selectAll(".info-label").remove();
+                })
+                .on("click", function(event, d) {
+                    const entropy = shannonEntropies[d.data.index] || 0;
+                    const distance = d.data.distance || 0;
+                    const nodeData = d.data;
+                    const stationId = stationIdSelect.value;
+                    const date = startDateInput.value;
+                    const time = "00:00";
+                    
+                    // Mapea los nombres de los contaminantes a los valores del radio button
+                    const contaminantMap = {
+                        "PM2_5": "PM2_5",
+                        "PM10": "PM10",
+                        "NO2": "NO2",
+                        "CO": "CO",
+                        "O3": "O3",
+                        "SO2": "SO2"
+                    };
+                
+                    // Obtén el contaminante seleccionado del nodo
+                    const contaminant = contaminantMap[nodeData.name] || "";
+                
+                    // Actualiza la selección del radio button
+                    const contaminantRadios = document.querySelectorAll('input[name="contaminant"]');
+                    contaminantRadios.forEach(radio => {
+                        if (radio.value === contaminant) {
+                            radio.checked = true;
+                        }
+                    });
+                    updateTimeSeriesChart();
+                
+                    console.log(`Datos del nodo:
+                        Nombre: ${nodeData.name},
+                        Distancia: ${distance.toFixed(2)},
+                        Entropía: ${entropy.toFixed(2)},
+                        Fecha: ${date},
+                        Hora: ${time},
+                        Station ID: ${stationId}`);
+                });
+                
+        
+                node.append("text")
+                    .attr("dy", "0.31em")
+                    .attr("x", d => d.x < Math.PI === !d.children ? 10 : -10)
+                    .style("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
+                    .attr("transform", d => {
+                        const angle = d.x * 180 / Math.PI;
+                        return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
+                    })
+                    .text(d => d.children ? null : d.data.name);
+        
             }).catch(error => {
                 console.error('Error al cargar los CSV:', error);
             });
         }
+        
 
 
 
@@ -308,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .attr("height", height);
 
         const g = svg.append("g")
-            .attr("transform", `translate(${width / 2.9}, ${height / 2})`); // Centra el grupo en el SVG
+            .attr("transform", `translate(${width / 2.3}, ${height / 2})`); // Centra el grupo en el SVG
 
         const tooltip = d3.select("body").append("div")
             .attr("class", "tooltip")
@@ -659,14 +722,7 @@ function addSeasonalBackground(svg, xScale, height, margin) {
     });
 }
 
-// Inicializar la gráfica de serie temporal con PM2.5 como default
-function initializeChart() {
-    // Marcar el radio de PM2.5 como seleccionado
-    document.querySelector('input[name="contaminant"][value="PM2_5"]').checked = true;
 
-    // Actualizar el gráfico
-    updateTimeSeriesChart();
-}
 // Escuchadores de eventos para la serie temporal
 stationIdSelect.addEventListener('change', updateTimeSeriesChart);
 startDateInput.addEventListener('change', updateTimeSeriesChart);

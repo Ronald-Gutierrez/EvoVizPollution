@@ -104,6 +104,7 @@
             </div>
         
             <div class="controls">
+                <!-- Controles de atributos -->
                 <label><input type="checkbox" class="attribute-checkbox" value="PM2_5" checked> PM2_5</label>
                 <label><input type="checkbox" class="attribute-checkbox" value="PM10" checked> PM10</label>
                 <label><input type="checkbox" class="attribute-checkbox" value="NO2" checked> NO2</label>
@@ -116,51 +117,58 @@
             </div>
             <!-- Leyenda del degradado -->
             <div class="gradient-legend">
-                <div class="gradient-bar"></div>
-                <div class="legend-labels">
-                    <span>Más Correlación</span>
-                    <span>Menos Correlación</span>
+                <div class="legend-title">Correlación</div>
+                <div class="gradient-container">
+                    <span class="legend-label">-</span>
+                    <div class="gradient-bar"></div>
+                    <span class="legend-label">+</span>
                 </div>
             </div>
+        
+            <!-- Contenedor para la información de la estación y la fecha -->
+            <div id="chart-info">
+                <!-- <p id="station-info">Estación: <span id="station-id"></span></p> -->
+                <p id="date-info">Fecha: <span id="selected-date"></span></p>
+            </div>
+        
             <div id="tooltip-rad" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
         
             <div id="tree-rad" class="chart"></div>
-            
         </div>
+        
         <!-- GRAFICA PARA MI SERIE TEMPORAL -->
-<!-- GRAFICA PARA MI SERIE TEMPORAL -->
-<div class="chart-container-time-temporal">
-    <div class="chart-header-time-temporal">
-        <h2>Evolución Temporal</h2>
-    </div>
-    <div id="tooltip-time-temporal" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
-    <div id="time-temporal" class="chart"></div>
-    <!-- Añadir leyenda -->
-    <div class="legend">
+        <div class="chart-container-time-temporal">
+            <div class="chart-header-time-temporal">
+                <h2>Evolución Temporal</h2>
+            </div>
+            <div id="tooltip-time-temporal" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
+            <div id="time-temporal" class="chart"></div>
+            <!-- Añadir leyenda -->
+            <div class="legend">
 
-        <div class="legend-item">
-            <span class="legend-color" style="background-color: #d0f0c0;"></span>
-            <span class="legend-label">Primavera</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color" style="background-color: #f0e68c;"></span>
-            <span class="legend-label">Verano</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color" style="background-color: #f4a460;"></span>
-            <span class="legend-label">Otoño</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-color" style="background-color: #add8e6;"></span>
-            <span class="legend-label">Invierno</span>
-        </div>
-        <div class="legend-item">
-            <span class="legend-line-dashed"></span>
-            <span class="legend-label">Promedio</span>
-        </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #d0f0c0;"></span>
+                    <span class="legend-label">Primavera</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #f0e68c;"></span>
+                    <span class="legend-label">Verano</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #f4a460;"></span>
+                    <span class="legend-label">Otoño</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-color" style="background-color: #add8e6;"></span>
+                    <span class="legend-label">Invierno</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-line-dashed"></span>
+                    <span class="legend-label">Promedio</span>
+                </div>
 
-    </div>
-</div>
+            </div>
+        </div>
 
         
     </div>
