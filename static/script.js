@@ -41,7 +41,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaultDate = '2017-01-01'; // Cambia esto a la fecha que desees
     startDateInput.value = defaultDate; // Establece la fecha de inicio
     endDateInput.value = defaultDate; // Establece la fecha de fin
+    const correlationMatrix = null;
+    function calculateCorrelationMatrix(data) {
+        const numAttributes = data[0].length;
+        const correlationMatrix = Array.from({ length: numAttributes }, () => Array(numAttributes).fill(0));
 
+        for (let i = 0; i < numAttributes; i++) {
+            for (let j = 0; j < numAttributes; j++) {
+                correlationMatrix[i][j] = calculateCorrelation(data.map(row => row[i]), data.map(row => row[j]));
+            }
+        }
+
+        return correlationMatrix;
+    }
+
+    function calculateCorrelation(x, y) {
+        const n = x.length;
+        const sumX = x.reduce((a, b) => a + b, 0);
+        const sumY = y.reduce((a, b) => a + b, 0);
+        const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+        const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
+        const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
+
+        const numerator = n * sumXY - sumX * sumY;
+        const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+
+        return denominator === 0 ? 0 : numerator / denominator; // Evitar división por cero
+    }
     // Carga el CSV y prepara los datos para el gráfico PCA
     d3.csv('data/PCA_VIZ_AQI_SIN-DW-FOR-DAY.csv').then(pcaData => {
 
@@ -331,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             radio.checked = true;
                         }
                     });
-                    updateTimeSeriesChart();
+                    updateTimeSeriesChart(correlationMatrix);
                 
                     console.log(`Datos del nodo:
                         Nombre: ${nodeData.name},
@@ -340,6 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         Fecha: ${date},
                         Hora: ${time},
                         Station ID: ${stationId}`);
+                    console.log(correlationMatrix)
                 });
                 
         
@@ -459,32 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return distanceMatrix;
         }
 
-        function calculateCorrelationMatrix(data) {
-            const numAttributes = data[0].length;
-            const correlationMatrix = Array.from({ length: numAttributes }, () => Array(numAttributes).fill(0));
 
-            for (let i = 0; i < numAttributes; i++) {
-                for (let j = 0; j < numAttributes; j++) {
-                    correlationMatrix[i][j] = calculateCorrelation(data.map(row => row[i]), data.map(row => row[j]));
-                }
-            }
-
-            return correlationMatrix;
-        }
-
-        function calculateCorrelation(x, y) {
-            const n = x.length;
-            const sumX = x.reduce((a, b) => a + b, 0);
-            const sumY = y.reduce((a, b) => a + b, 0);
-            const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
-            const sumX2 = x.reduce((sum, xi) => sum + xi * xi, 0);
-            const sumY2 = y.reduce((sum, yi) => sum + yi * yi, 0);
-
-            const numerator = n * sumXY - sumX * sumY;
-            const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
-
-            return denominator === 0 ? 0 : numerator / denominator; // Evitar división por cero
-        }
 
         // Función para calcular la entropía de Shannon
         function calculateShannonEntropy(data, attributes) {
@@ -513,8 +515,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePCAChart();
     });
 
+
 // GRAFICA PARA MI SERIE TEMPORAL
-function updateTimeSeriesChart() {
+function updateTimeSeriesChart(matrixCorrelaction) {
     const stationId = stationIdSelect.value;
     const startDate = new Date(startDateInput.value);
     const endDate = new Date(endDateInput.value);
@@ -527,6 +530,7 @@ function updateTimeSeriesChart() {
         d3.csv('data/daily_aqi_output.csv') // Nuevo archivo CSV
     ]).then(([aqData, meoData, aqiOutputData]) => {
         // Filtrar los datos según la estación y el rango de fechas
+        
         const filteredAqData = aqData.filter(d => {
             const date = new Date(d.date);
             return d.stationId === stationId && date >= startDate && date <= endDate;
@@ -609,14 +613,68 @@ function updateTimeSeriesChart() {
             .on('mouseover', function(event, d) {
                 // Mostrar tooltip
                 tooltip.style('display', 'inline');
-                tooltip.html(`Station ID: ${d.stationId}<br>Date: ${d.date.toISOString().split('T')[0]}<br>${selectedContaminant}: ${d.average}`);
+            
+                // Filtrar los datos para obtener la serie temporal completa de la misma fecha y stationId
+                const timeSeriesData = filteredAqData.filter(t => t.date === d.date.toISOString().split('T')[0] && t.stationId === d.stationId);
+            
+                // Crear un mini gráfico dentro del tooltip
+                const tooltipWidth = 350;
+                const tooltipHeight = 130;
+                const margin = { top: 10, right: 10, bottom: 20, left: 30 };
+            
+                // Limpiar el contenido anterior del tooltip
+                tooltip.html(''); // Limpia el contenido del tooltip
+                // Estilo del tooltip con fondo blanco
+                tooltip.style('background-color', 'white')
+                .style('border', '1px solid black') // Añadir borde si lo deseas
+                .style('padding', '10px')           // Ajustar padding
+                .style('border-radius', '5px');     // Bordes redondeados
 
+                // Añadir la información básica al tooltip
+                tooltip.append('div').html(`Station ID: ${d.stationId}<br>Date: ${d.date.toISOString().split('T')[0]}<br>${selectedContaminant}: ${d.average}`);
+            
+                // Añadir el contenedor SVG para la gráfica
+                const svg = tooltip.append('svg')
+                    .attr('width', tooltipWidth)
+                    .attr('height', tooltipHeight);
+            
+                // Escalas para la gráfica
+                const xScale = d3.scaleLinear()
+                    .domain([0, timeSeriesData.length - 1])
+                    .range([margin.left, tooltipWidth - margin.right]);
+            
+                const yScale = d3.scaleLinear()
+                    .domain([0, d3.max(timeSeriesData, t => +t[selectedContaminant])])
+                    .range([tooltipHeight - margin.bottom, margin.top]);
+            
+                // Eje X (Horas del día)
+                svg.append('g')
+                    .attr('transform', `translate(0,${tooltipHeight - margin.bottom})`)
+                    .call(d3.axisBottom(xScale).ticks(timeSeriesData.length).tickFormat((d, i) => timeSeriesData[i].time));
+            
+                // Eje Y (Valores del contaminante)
+                svg.append('g')
+                    .attr('transform', `translate(${margin.left},0)`)
+                    .call(d3.axisLeft(yScale));
+            
+                // Línea de la serie temporal
+                const line = d3.line()
+                    .x((d, i) => xScale(i))
+                    .y(d => yScale(+d[selectedContaminant]));
+            
+                svg.append('path')
+                    .datum(timeSeriesData)
+                    .attr('fill', 'none')
+                    .attr('stroke', 'steelblue')
+                    .attr('stroke-width', 2)
+                    .attr('d', line);
+            
                 // Posicionar el tooltip en el punto
                 const [x, y] = d3.pointer(event);
                 tooltip
-                    .style('left', `${x + margin.left}px`)
-                    .style('top', `${y + margin.top - 40}px`);
-
+                    .style('left', `${x + 15}px`)  // Ajusta la posición del tooltip
+                    .style('top', `${y + 15}px`);  // Ajusta la posición del tooltip
+            
                 // Cambiar tamaño y agregar borde al pasar el mouse
                 d3.select(this)
                     .attr('r', 8) // Aumentar el radio del círculo
@@ -624,22 +682,23 @@ function updateTimeSeriesChart() {
                     .attr('stroke-width', 2); // Ancho del borde
             })
             .on('mousemove', function(event) {
-                // Mantener el tooltip en el punto
+                // Mantener el tooltip en el punto mientras se mueve el mouse
                 const [x, y] = d3.pointer(event);
                 tooltip
-                    .style('left', `${x + margin.left}px`)
-                    .style('top', `${y + margin.top - 40}px`);
+                    .style('left', `${x + 15}px`)
+                    .style('top', `${y + 15}px`);
             })
             .on('mouseout', function(event, d) {
                 // Ocultar tooltip y restaurar tamaño y color del punto
                 tooltip.style('display', 'none');
-                const aqiRecord = aqiOutputData.find(a => a.date === d.date.toISOString().split('T')[0] && a.stationId === d.stationId);
                 d3.select(this)
                     .attr('r', 4) // Restaurar el radio original
                     .attr('stroke', 'none'); // Eliminar el borde
             })
+            
             .on('click', function(event, d) {
                 console.log(`Station ID: ${d.stationId}, Date: ${d.date.toISOString().split('T')[0]}, ${selectedContaminant}: ${d.average}`);
+                console.log(matrixCorrelaction);
             });
 
 
@@ -723,17 +782,9 @@ function addSeasonalBackground(svg, xScale, height, margin) {
 }
 
 
-// Escuchadores de eventos para la serie temporal
-stationIdSelect.addEventListener('change', updateTimeSeriesChart);
-startDateInput.addEventListener('change', updateTimeSeriesChart);
-endDateInput.addEventListener('change', updateTimeSeriesChart);
 
-// Escuchadores de eventos para la selección de contaminantes
-contaminantRadios.forEach(radio => {
-    radio.addEventListener('change', updateTimeSeriesChart);
-});
 
-// Inicializar la gráfica de serie temporal al cargar la página
-window.addEventListener('load', initializeChart);
+// // Inicializar la gráfica de serie temporal al cargar la página
+// window.addEventListener('load', initializeChart);
 
 });
