@@ -507,20 +507,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
 
-
-        // Función para calcular la entropía de Shannon
-        function calculateShannonEntropy(data, attributes) {
-            const total = data.length;
-            const entropy = attributes.reduce((acc, attr) => {
-                const attrData = data.map(d => +d[attr] || 0);
-                const sum = d3.sum(attrData);
-                const probabilities = attrData.map(value => value / sum);
-                const attrEntropy = -d3.sum(probabilities.map(p => (p > 0 ? p * Math.log2(p) : 0)));
-                return acc + attrEntropy;
-            }, 0);
-            return entropy / attributes.length; // Promedio de entropía por atributo
-        }
-
         // Añadir eventos de cambio para actualizar el gráfico PCA
         function setupEventListenersForPCA() {
             stationIdSelect.addEventListener('change', updatePCAChart);
@@ -632,7 +618,7 @@ function updateTimeSeriesChart(matrixCorrelaction) {
             .on('mouseover', function(event, d) {
                 // Mostrar tooltip
                 tooltip.style('display', 'inline');
-            
+                
                 // Filtrar los datos para obtener la serie temporal completa de la misma fecha y stationId
                 const timeSeriesData = filteredAqData.filter(t => t.date === d.date.toISOString().split('T')[0] && t.stationId === d.stationId);
             
@@ -643,12 +629,13 @@ function updateTimeSeriesChart(matrixCorrelaction) {
             
                 // Limpiar el contenido anterior del tooltip
                 tooltip.html(''); // Limpia el contenido del tooltip
-                // Estilo del tooltip con fondo blanco
+            
+                // Estilo del tooltip
                 tooltip.style('background-color', 'white')
-                .style('border', '1px solid black') // Añadir borde si lo deseas
-                .style('padding', '10px')           // Ajustar padding
-                .style('border-radius', '5px');     // Bordes redondeados
-
+                    .style('border', '1px solid black')
+                    .style('padding', '10px')
+                    .style('border-radius', '5px'); 
+            
                 // Añadir la información básica al tooltip
                 tooltip.append('div').html(`Station ID: ${d.stationId}<br>Date: ${d.date.toISOString().split('T')[0]}<br>${selectedContaminant}: ${d.average}`);
             
@@ -688,11 +675,32 @@ function updateTimeSeriesChart(matrixCorrelaction) {
                     .attr('stroke-width', 2)
                     .attr('d', line);
             
-                // Posicionar el tooltip en el punto
-                const [x, y] = d3.pointer(event);
+                // Obtener las dimensiones del gráfico para calcular los sectores
+                const chartWidth = d3.select('svg').node().clientWidth;
+                const chartHeight = d3.select('svg').node().clientHeight;
+            
+                // Posicionar el tooltip en función de la ubicación del mouse y el sector
+                const [mouseX, mouseY] = d3.pointer(event);
+                let tooltipX, tooltipY;
+            
+                // Dividir el gráfico en 4 sectores y ajustar la posición del tooltip
+                if (mouseX < chartWidth / 2 && mouseY < chartHeight / 2) { // Superior izquierda
+                    tooltipX = mouseX + 15;  // Hacia la derecha del punto
+                    tooltipY = mouseY;  // Mismo nivel
+                } else if (mouseX >= chartWidth / 2 && mouseY < chartHeight / 2) { // Superior derecha
+                    tooltipX = mouseX - tooltipWidth - 30; // Hacia la izquierda del punto
+                    tooltipY = mouseY;  // Mismo nivel
+                } else if (mouseX < chartWidth / 2 && mouseY >= chartHeight / 2) { // Inferior izquierda
+                    tooltipX = mouseX + 15;  // Hacia la derecha del punto
+                    tooltipY = mouseY - tooltipHeight - 30; // Un poco arriba del punto
+                } else if (mouseX >= chartWidth / 2 && mouseY >= chartHeight / 2) { // Inferior derecha
+                    tooltipX = mouseX - tooltipWidth - 30; // Hacia la izquierda del punto
+                    tooltipY = mouseY - tooltipHeight - 30; // Un poco arriba del punto
+                }
+            
                 tooltip
-                    .style('left', `${x + 15}px`)  // Ajusta la posición del tooltip
-                    .style('top', `${y + 15}px`);  // Ajusta la posición del tooltip
+                    .style('left', `${tooltipX}px`)  // Ajusta la posición del tooltip
+                    .style('top', `${tooltipY}px`);  // Ajusta la posición del tooltip
             
                 // Cambiar tamaño y agregar borde al pasar el mouse
                 d3.select(this)
@@ -700,20 +708,14 @@ function updateTimeSeriesChart(matrixCorrelaction) {
                     .attr('stroke', 'blue') // Agregar borde azul
                     .attr('stroke-width', 2); // Ancho del borde
             })
-            .on('mousemove', function(event) {
-                // Mantener el tooltip en el punto mientras se mueve el mouse
-                const [x, y] = d3.pointer(event);
-                tooltip
-                    .style('left', `${x + 15}px`)
-                    .style('top', `${y + 15}px`);
-            })
+            
             .on('mouseout', function(event, d) {
                 // Ocultar tooltip y restaurar tamaño y color del punto
                 tooltip.style('display', 'none');
                 d3.select(this)
                     .attr('r', 4) // Restaurar el radio original
                     .attr('stroke', 'none'); // Eliminar el borde
-            })
+            })                      
             .on('click', function(event, d) {
                 // Obtener el índice del contaminante seleccionado
                 const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
