@@ -366,7 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         Fecha: ${date},
                         Hora: ${time},
                         Station ID: ${stationId}`);
-                    console.log(correlationMatrix)
+                    console.log(correlationMatrix);
+                    console.log(distanceMatrix)
+                    
                 });
                 
         
@@ -421,43 +423,61 @@ document.addEventListener('DOMContentLoaded', () => {
         svg.call(zoom);
 
         function buildHierarchy(attributes, distanceMatrix) {
+            // Inicializar cada clúster como un solo punto
             let clusters = attributes.map((attr, i) => ({
                 name: attr,
-                distance: 0,
                 index: i,
+                points: [i],  // Cada clúster empieza con un solo punto
                 children: []
             }));
-
+        
             let n = clusters.length;
-
+        
             while (n > 1) {
-                let minDistance = Infinity;
+                let minAverageDistance = Infinity;
                 let a, b;
-
+        
+                // Encontrar el par de clústeres con la menor distancia promedio
                 for (let i = 0; i < n; i++) {
                     for (let j = i + 1; j < n; j++) {
-                        if (distanceMatrix[clusters[i].index][clusters[j].index] < minDistance) {
-                            minDistance = distanceMatrix[clusters[i].index][clusters[j].index];
+                        let sumDistance = 0;
+                        let count = 0;
+        
+                        // Calcular la distancia promedio entre todos los pares de puntos en los clústeres i y j
+                        for (let pointI of clusters[i].points) {
+                            for (let pointJ of clusters[j].points) {
+                                sumDistance += distanceMatrix[pointI][pointJ];
+                                count++;
+                            }
+                        }
+        
+                        const averageDistance = sumDistance / count;
+        
+                        if (averageDistance < minAverageDistance) {
+                            minAverageDistance = averageDistance;
                             a = i;
                             b = j;
                         }
                     }
                 }
-
+        
+                // Crear un nuevo clúster combinando los clústeres a y b
                 const newCluster = {
                     name: clusters[a].name + '-' + clusters[b].name,
-                    distance: minDistance,
-                    children: [clusters[a], clusters[b]],
-                    index: clusters[a].index
+                    distance: minAverageDistance,
+                    points: clusters[a].points.concat(clusters[b].points), // Unir puntos
+                    children: [clusters[a], clusters[b]]
                 };
-
+        
+                // Actualizar la lista de clústeres
                 clusters = clusters.filter((_, i) => i !== a && i !== b);
                 clusters.push(newCluster);
                 n--;
             }
-
+        
             return clusters[0];
         }
+        
 
         function project(x, y) {
             const angle = x - Math.PI / 2;
@@ -530,7 +550,6 @@ function updateTimeSeriesChart(matrixCorrelaction) {
         d3.csv('data/daily_aqi_output.csv') // Nuevo archivo CSV
     ]).then(([aqData, meoData, aqiOutputData]) => {
         // Filtrar los datos según la estación y el rango de fechas
-        
         const filteredAqData = aqData.filter(d => {
             const date = new Date(d.date);
             return d.stationId === stationId && date >= startDate && date <= endDate;
@@ -695,12 +714,33 @@ function updateTimeSeriesChart(matrixCorrelaction) {
                     .attr('r', 4) // Restaurar el radio original
                     .attr('stroke', 'none'); // Eliminar el borde
             })
-            
             .on('click', function(event, d) {
-                console.log(`Station ID: ${d.stationId}, Date: ${d.date.toISOString().split('T')[0]}, ${selectedContaminant}: ${d.average}`);
-                console.log(matrixCorrelaction);
-            });
+                // Obtener el índice del contaminante seleccionado
+                const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
+                const meoAttributes = ['temperature', 'pressure', 'humidity'];
+                const attributes = [...aqAttributes, ...meoAttributes];
 
+                // Encontrar el índice del contaminante seleccionado
+                const contaminantIndex = aqAttributes.indexOf(selectedContaminant);
+
+                // Extraer la columna de correlaciones del contaminante
+                const correlations = matrixCorrelaction[contaminantIndex].slice(aqAttributes.length); // Correlaciones con atributos meteorológicos
+
+                // Crear una lista de pares [atributo, correlación] y ordenar por correlación
+                const sortedCorrelations = meoAttributes.map((attr, index) => ({
+                    attribute: attr,
+                    correlation: correlations[index]
+                })).sort((a, b) => b.correlation - a.correlation);
+
+                // Mostrar la lista ordenada en la consola
+                console.log(`Correlaciones con ${selectedContaminant}:`);
+                sortedCorrelations.forEach(item => {
+                    console.log(`${item.attribute}: ${item.correlation}`);
+                });
+
+                // Log del evento de clic
+                console.log(`Station ID: ${d.stationId}, Date: ${d.date.toISOString().split('T')[0]}, ${selectedContaminant}: ${d.average}`);
+            });
 
         // Añadir el eje X
         svg.append('g')
@@ -726,6 +766,7 @@ function updateTimeSeriesChart(matrixCorrelaction) {
         const tooltip = d3.select('#tooltip-time-temporal');
     });
 }
+
 
 
 function addSeasonalBackground(svg, xScale, height, margin) {
