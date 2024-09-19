@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const defaultDate = '2017-01-01'; // Cambia esto a la fecha que desees
+    const defaultDate = '2018-01-01'; // Cambia esto a la fecha que desees
     startDateInput.value = defaultDate; // Establece la fecha de inicio
     endDateInput.value = defaultDate; // Establece la fecha de fin
     const correlationMatrix = null;
@@ -357,13 +357,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             radio.checked = true;
                         }
                     });
-                    updateTimeSeriesChart(correlationMatrix);
+                    updateTimeSeriesChart(correlationMatrix, formattedDate, contaminant);
                 
                     console.log(`Datos del nodo:
                         Nombre: ${nodeData.name},
                         Distancia: ${distance.toFixed(2)},
                         Entropía: ${entropy.toFixed(2)},
-                        Fecha: ${date},
+                        Fecha: ${formattedDate},
                         Hora: ${time},
                         Station ID: ${stationId}`);
                     console.log(correlationMatrix);
@@ -523,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // GRAFICA PARA MI SERIE TEMPORAL
-function updateTimeSeriesChart(matrixCorrelaction) {
+function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
     const stationId = stationIdSelect.value;
     const startDate = new Date(startDateInput.value);
     const endDate = new Date(endDateInput.value);
@@ -600,7 +600,9 @@ function updateTimeSeriesChart(matrixCorrelaction) {
             5: '#800080', // Muy insalubre (201-300)
             6: '#800000'  // Peligroso (301 en adelante)
         };
-
+        
+        svg.selectAll('circle')
+        
         // Añadir puntos al gráfico
         svg.selectAll('circle')
             .data(averagedData)
@@ -644,20 +646,35 @@ function updateTimeSeriesChart(matrixCorrelaction) {
                     .attr('width', tooltipWidth)
                     .attr('height', tooltipHeight);
             
-                // Escalas para la gráfica
-                const xScale = d3.scaleLinear()
-                    .domain([0, timeSeriesData.length - 1])
-                    .range([margin.left, tooltipWidth - margin.right]);
-            
+
                 const yScale = d3.scaleLinear()
                     .domain([0, d3.max(timeSeriesData, t => +t[selectedContaminant])])
                     .range([tooltipHeight - margin.bottom, margin.top]);
             
                 // Eje X (Horas del día)
+                const numTicks = 7; // Número de horas a mostrar
+                const totalHours = 24; // Total de horas en un día
+                const hours = d3.range(0, totalHours, totalHours / numTicks).map(h => {
+                    const date = new Date(0, 0, 0, h); // Crear una fecha base con la hora correspondiente
+                    return d3.timeFormat('%I %p')(date); // Formato de hora en AM/PM
+                });
+
+                // Crear una escala lineal para el eje X
+                const xScale = d3.scaleLinear()
+                    .domain([0, totalHours - 1]) // Dominio de 0 a 23
+                    .range([margin.left, tooltipWidth - margin.right]); // Rango del gráfico
+
+                // Añadir el eje X al SVG
                 svg.append('g')
                     .attr('transform', `translate(0,${tooltipHeight - margin.bottom})`)
-                    .call(d3.axisBottom(xScale).ticks(timeSeriesData.length).tickFormat((d, i) => timeSeriesData[i].time));
-            
+                    .call(d3.axisBottom(xScale)
+                        .tickValues(d3.range(0, totalHours, totalHours / numTicks)) // Mostrar las horas específicas
+                        .tickFormat((d) => {
+                            const hour = new Date(0, 0, 0, d); // Crear una fecha base
+                            return d3.timeFormat('%I %p')(hour); // Formato de hora en AM/PM
+                        })
+                    );
+
                 // Eje Y (Valores del contaminante)
                 svg.append('g')
                     .attr('transform', `translate(${margin.left},0)`)
@@ -738,10 +755,14 @@ function updateTimeSeriesChart(matrixCorrelaction) {
                 console.log(`Correlaciones con ${selectedContaminant}:`);
                 sortedCorrelations.forEach(item => {
                     console.log(`${item.attribute}: ${item.correlation}`);
+
                 });
 
                 // Log del evento de clic
                 console.log(`Station ID: ${d.stationId}, Date: ${d.date.toISOString().split('T')[0]}, ${selectedContaminant}: ${d.average}`);
+                console.log(fecha);
+                console.log(contaminate);
+                
             });
 
         // Añadir el eje X
