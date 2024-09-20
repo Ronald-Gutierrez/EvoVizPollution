@@ -287,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
                 // Eventos de hover (mouseover) y click tal como los tienes definidos...
                 node.on("mouseover", function(event, d) {
-                    tooltipRAD.style('display', 'block');
+                    // tooltipRAD.style('display', 'block');
                     const node = d3.select(this);
                     const circle = node.select("circle");
         
