@@ -522,7 +522,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-// GRAFICA PARA MI SERIE TEMPORAL
 function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
     const stationId = stationIdSelect.value;
     const startDate = new Date(startDateInput.value);
@@ -601,8 +600,6 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
             6: '#800000'  // Peligroso (301 en adelante)
         };
         
-        svg.selectAll('circle')
-        
         // Añadir puntos al gráfico
         svg.selectAll('circle')
             .data(averagedData)
@@ -610,13 +607,14 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
             .append('circle')
             .attr('cx', d => xScale(d.date))
             .attr('cy', d => yScale(d.average))
-            .attr('r', 4) // Radio del círculo
+            .attr('r', d => d.date.toISOString().split('T')[0] === fecha ? 12 : 4) // Ajustar radio según la fecha
             .attr('fill', d => {
                 // Encontrar el color del AQI para la fecha y estación correspondientes
                 const aqiRecord = aqiOutputData.find(a => a.date === d.date.toISOString().split('T')[0] && a.stationId === d.stationId);
                 return aqiRecord ? aqiColors[aqiRecord[selectedContaminant]] : 'steelblue'; // Usar color por defecto si no hay registro de AQI
             })
-            .attr('stroke', 'none') // Inicialmente sin borde
+            .attr('stroke', d => d.date.toISOString().split('T')[0] === fecha ? 'blue' : 'none') // Ajustar borde según la fecha
+            .attr('stroke-width', d => d.date.toISOString().split('T')[0] === fecha ? 3 : 0) // Ajustar ancho del borde según la fecha
             .on('mouseover', function(event, d) {
                 // Mostrar tooltip
                 tooltip.style('display', 'inline');
@@ -646,7 +644,6 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
                     .attr('width', tooltipWidth)
                     .attr('height', tooltipHeight);
             
-
                 const yScale = d3.scaleLinear()
                     .domain([0, d3.max(timeSeriesData, t => +t[selectedContaminant])])
                     .range([tooltipHeight - margin.bottom, margin.top]);
@@ -725,14 +722,13 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
                     .attr('stroke', 'blue') // Agregar borde azul
                     .attr('stroke-width', 2); // Ancho del borde
             })
-            
             .on('mouseout', function(event, d) {
                 // Ocultar tooltip y restaurar tamaño y color del punto
                 tooltip.style('display', 'none');
                 d3.select(this)
-                    .attr('r', 4) // Restaurar el radio original
-                    .attr('stroke', 'none'); // Eliminar el borde
-            })                      
+                    .attr('r', d => d.date.toISOString().split('T')[0] === fecha ? 12 : 4) // Restaurar el radio original
+                    .attr('stroke', d => d.date.toISOString().split('T')[0] === fecha ? 'blue' : 'none'); // Eliminar el borde
+            })
             .on('click', function(event, d) {
                 // Obtener el índice del contaminante seleccionado
                 const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
@@ -755,14 +751,12 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
                 console.log(`Correlaciones con ${selectedContaminant}:`);
                 sortedCorrelations.forEach(item => {
                     console.log(`${item.attribute}: ${item.correlation}`);
-
                 });
 
                 // Log del evento de clic
                 console.log(`Station ID: ${d.stationId}, Date: ${d.date.toISOString().split('T')[0]}, ${selectedContaminant}: ${d.average}`);
                 console.log(fecha);
                 console.log(contaminate);
-                
             });
 
         // Añadir el eje X
@@ -789,6 +783,7 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
         const tooltip = d3.select('#tooltip-time-temporal');
     });
 }
+
 
 
 
