@@ -3,244 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dendrograma Hexagonal con D3.js</title>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>Serie Temporal con D3.js</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #f0f0f0;
+        circle {
+            fill: steelblue;
+            transition: r 0.3s, stroke-width 0.3s;
         }
-        .chart-container {
-            display: flex;
-            align-items: center;
-            position: relative;
-        }
-        .node {
-            font: 12px sans-serif;
-        }
-        .link {
-            fill: none;
-            stroke: #ccc;
-            stroke-width: 2px;
-        }
-        .highlighted-link {
-            stroke: red;
-            fill: none;
-            stroke-width: 2px;
-            stroke-dasharray: 4, 4; /* Línea punteada */
-        }
-        .tooltip {
-            position: absolute;
-            text-align: center;
-            width: 80px;
-            height: 28px;
-            padding: 2px;
-            font: 12px sans-serif;
-            background: lightsteelblue;
-            border: 0px;
-            border-radius: 8px;
-            pointer-events: none;
-        }
-        .controls {
-            width: 200px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background: #fff;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            margin-right: 20px;
-        }
-        .controls label {
-            margin: 5px 0;
-            display: flex;
-            align-items: center;
-        }
-        .controls input[type="checkbox"] {
-            margin-right: 10px;
-        }
-        svg {
-            border: 1px solid #ddd;
-            border-radius: 8px;
+
+        .highlight {
+            r: 10;
+            stroke: blue;
+            stroke-width: 3;
         }
     </style>
 </head>
 <body>
-    <div class="chart-container">
-        <div class="controls">
-            <label><input type="checkbox" class="attribute-checkbox" value="PM2_5" checked> PM2_5</label>
-            <label><input type="checkbox" class="attribute-checkbox" value="PM10" checked> PM10</label>
-            <label><input type="checkbox" class="attribute-checkbox" value="NO2" checked> NO2</label>
-            <label><input type="checkbox" class="attribute-checkbox" value="CO" checked> CO</label>
-            <label><input type="checkbox" class="attribute-checkbox" value="O3" checked> O3</label>
-            <label><input type="checkbox" class="attribute-checkbox" value="SO2" checked> SO2</label>
-            <label><input type="checkbox" class="attribute-checkbox" value="temperature" checked> Temperature</label>
-            <label><input type="checkbox" class="attribute-checkbox" value="pressure" checked> Pressure</label>
-            <label><input type="checkbox" class="attribute-checkbox" value="humidity" checked> Humidity</label>
-        </div>
-
-        <svg width="600" height="600"></svg>
-    </div>
-
+    <svg id="chart" width="800" height="400"></svg>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
-        const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
-        const meoAttributes = ['temperature', 'pressure', 'humidity'];
-        const allAttributes = [...aqAttributes, ...meoAttributes];
-
-        const distanceMatrix = [
-            [0, 1.4324659468581082, 1.3741895017246408, 1.3524283396263526, 1.4720110156685529, 1.2994422485865655, 1.4836641127218884, 1.331634983831686, 1.422883153029264],
-            [1.4324659468581082, 0, 1.6014916188289152, 1.86478561751244, 1.0731520507954366, 1.5968148564476228, 1.0967284473847863, 1.7720926804895984, 1.0109657534053984],
-            [1.3741895017246408, 1.6014916188289152, 0, 1.3985167089056112, 1.8443744807132447, 1.3868541475433116, 1.6843486662554692, 1.3105987853399388, 1.2645600726881148],
-            [1.3524283396263526, 1.86478561751244, 1.3985167089056112, 0, 1.509354235267772, 1.1035011463187883, 1.561205830354015, 1.0589119642884466, 1.7826048063351183],
-            [1.4720110156685529, 1.0731520507954366, 1.8443744807132447, 1.509354235267772, 0, 1.5872779321783976, 0.47505894244748764, 1.8529645030914041, 1.6492316467665937],
-            [1.2994422485865655, 1.5968148564476228, 1.3868541475433116, 1.1035011463187883, 1.5872779321783976, 0, 1.622162815171491, 1.1007758723829226, 1.517179854827837],
-            [1.4836641127218884, 1.0967284473847863, 1.6843486662554692, 1.561205830354015, 0.47505894244748764, 1.622162815171491, 0, 1.9385690595122151, 1.6136559577538154],
-            [1.331634983831686, 1.7720926804895984, 1.3105987853399388, 1.0589119642884466, 1.8529645030914041, 1.1007758723829226, 1.9385690595122151, 0, 1.458225881162374],
-            [1.422883153029264, 1.0109657534053984, 1.2645600726881148, 1.7826048063351183, 1.6492316467665937, 1.517179854827837, 1.6136559577538154, 1.458225881162374, 0]
+        const data = [
+            { date: new Date(2023, 0, 1), value: 30 },
+            { date: new Date(2023, 0, 2), value: 20 },
+            { date: new Date(2023, 0, 3), value: 50 },
+            { date: new Date(2023, 0, 4), value: 40 },
+            { date: new Date(2023, 0, 5), value: 60 },
+            { date: new Date(2023, 0, 6), value: 80 },
+            { date: new Date(2023, 0, 7), value: 70 }
         ];
 
-        const width = 600;
-        const height = 600;
-        const radius = width / 2;
-        const clusterRadius = radius - 100;
+        // Generar una fecha aleatoria entre las fechas de los datos
+        const randomIndex = Math.floor(Math.random() * data.length);
+        const highlightDate = data[randomIndex].date;
 
-        const svg = d3.select("svg")
-            .attr("width", width)
-            .attr("height", height)
+        const svg = d3.select("#chart")
             .append("g")
-            .attr("transform", "translate(" + radius + "," + radius + ")");
+            .attr("transform", "translate(50, 50)");
 
-        const tooltip = d3.select("body").append("div")
-            .attr("class", "tooltip")
-            .style("opacity", 0);
+        const xScale = d3.scaleTime()
+            .domain(d3.extent(data, d => d.date))
+            .range([0, 700]);
 
-        function updateDendrogram() {
-        const selectedAttributes = Array.from(document.querySelectorAll('.attribute-checkbox:checked:not(.hidden-checkbox)')).map(cb => cb.value);
-            if (selectedAttributes.length < 2) {
-                svg.selectAll("*").remove();
-                return;
-            }
+        const yScale = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.value)])
+            .range([300, 0]);
 
-            const selectedIndexes = selectedAttributes.map(attr => allAttributes.indexOf(attr));
-            const filteredMatrix = selectedIndexes.map(i => selectedIndexes.map(j => distanceMatrix[i][j]));
+        // Ejes
+        svg.append("g")
+            .attr("transform", "translate(0, 300)")
+            .call(d3.axisBottom(xScale));
 
-            const root = d3.hierarchy(buildHierarchy(selectedAttributes, filteredMatrix), d => d.children);
+        svg.append("g")
+            .call(d3.axisLeft(yScale));
 
-            assignHexagonalLeafPositions(root, selectedAttributes.length);
-
-            const cluster = d3.cluster().size([2 * Math.PI, clusterRadius]);
-            cluster(root);
-
-            svg.selectAll("*").remove();
-
-            svg.selectAll(".link")
-                .data(root.links())
-                .enter().append("path")
-                .attr("class", d => {
-                    const sourceIsMeo = meoAttributes.includes(d.source.data.name);
-                    const targetIsMeo = meoAttributes.includes(d.target.data.name);
-                    return sourceIsMeo || targetIsMeo ? "highlighted-link" : "link";
-                })
-                .attr("d", d3.linkRadial()
-                    .angle(d => d.x)
-                    .radius(d => d.y));
-
-            const node = svg.selectAll(".node")
-                .data(root.descendants())
-                .enter().append("g")
-                .attr("class", "node")
-                .attr("transform", d => `translate(${project(d.x, d.y)})`)
-                .on("mouseover", function(event, d) {
-                    tooltip.transition()
-                        .duration(200)
-                        .style("opacity", .9);
-                    tooltip.html("Distancia: " + (d.data.distance || 0).toFixed(2))
-                        .style("left", (event.pageX + 5) + "px")
-                        .style("top", (event.pageY - 28) + "px");
-                })
-                .on("mouseout", function(d) {
-                    tooltip.transition()
-                        .duration(500)
-                        .style("opacity", 0);
-                });
-
-            node.append("circle")
-                .attr("r", 6);
-
-            node.append("text")
-                .attr("dy", "0.31em")
-                .attr("x", d => d.x < Math.PI === !d.children ? 6 : -6)
-                .style("text-anchor", d => d.x < Math.PI === !d.children ? "start" : "end")
-                .attr("transform", d => {
-                    const angle = d.x * 180 / Math.PI;
-                    return d.children ? null : "rotate(" + (angle < 180 ? angle - 90 : angle + 90) + ")";
-                })
-                .text(d => d.children ? null : d.data.name);
-        }
-
-        function buildHierarchy(attributes, distanceMatrix) {
-            let clusters = attributes.map((attr, i) => ({
-                name: attr,
-                distance: 0,
-                index: i,
-                children: []
-            }));
-
-            let n = clusters.length;
-
-            while (n > 1) {
-                let minDistance = Infinity;
-                let a, b;
-
-                for (let i = 0; i < n; i++) {
-                    for (let j = i + 1; j < n; j++) {
-                        if (distanceMatrix[clusters[i].index][clusters[j].index] < minDistance) {
-                            minDistance = distanceMatrix[clusters[i].index][clusters[j].index];
-                            a = i;
-                            b = j;
-                        }
-                    }
-                }
-
-                const newCluster = {
-                    name: clusters[a].name + '-' + clusters[b].name,
-                    distance: minDistance,
-                    children: [clusters[a], clusters[b]],
-                    index: clusters[a].index
-                };
-
-                clusters = clusters.filter((_, i) => i !== a && i !== b);
-                clusters.push(newCluster);
-                n--;
-            }
-
-            return clusters[0];
-        }
-
-        function assignHexagonalLeafPositions(root, count) {
-            const leaves = root.leaves();
-            const angleStep = (2 * Math.PI) / count;
-            leaves.forEach((leaf, i) => {
-                leaf.x = i * angleStep;
-                leaf.y = clusterRadius;
+        // Crear círculos
+        svg.selectAll("circle")
+            .data(data)
+            .enter()
+            .append("circle")
+            .attr("cx", d => xScale(d.date))
+            .attr("cy", d => yScale(d.value))
+            .attr("r", d => d.date === highlightDate ? 10 : 5) // tamaño de círculo
+            .attr("class", d => d.date === highlightDate ? 'highlight' : '')
+            .on("mouseover", function() {
+                d3.select(this).attr("class", "highlight");
+            })
+            .on("mouseout", function() {
+                d3.select(this).attr("class", d => d.date === highlightDate ? 'highlight' : '');
             });
-        }
-
-        function project(x, y) {
-            const angle = x - Math.PI / 2;
-            return [y * Math.cos(angle), y * Math.sin(angle)];
-        }
-
-        document.querySelectorAll('.attribute-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', updateDendrogram);
-        });
-
-        updateDendrogram();
     </script>
 </body>
 </html>

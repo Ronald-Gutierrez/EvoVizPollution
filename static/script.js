@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const [x, y] = d3.pointer(event, pcaSvg.node());
 
                     tooltipPCA.style('display', 'block')
-                        .html(`Fecha: ${new Date(new Date(d.date).setDate(new Date(d.date).getDate() + 1)).toLocaleDateString()}<br>Hora: ${d.time} <br>AQI: ${d.AQI}`)
+                        .html(`Fecha: ${new Date(new Date(d.date).setDate(new Date(d.date).getDate() + 1)).toLocaleDateString()} <br>AQI: ${d.AQI}`)
                         .style('left', `${x + 5}px`)
                         .style('top', `${y - 28}px`);
                 })
