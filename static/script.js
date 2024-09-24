@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
+function updateTimeSeriesChart(matrixCorrelaction, fecha_selected, contaminate) {
     const stationId = stationIdSelect.value;
     const startDate = new Date(startDateInput.value);
     const endDate = new Date(endDateInput.value);
@@ -600,135 +600,159 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
             6: '#800000'  // Peligroso (301 en adelante)
         };
         
-        // Añadir puntos al gráfico
+        
+        // Asegúrate de que fecha_selected tenga el formato correcto
+        const formattedFechaSelected = fecha_selected.split('-').reverse().join('-'); // Convertir a YYYY-MM-DD
+
         svg.selectAll('circle')
-            .data(averagedData)
-            .enter()
-            .append('circle')
-            .attr('cx', d => xScale(d.date))
-            .attr('cy', d => yScale(d.average))
-            .attr('r', d => d.date.toISOString().split('T')[0] === fecha ? 12 : 4) // Ajustar radio según la fecha
-            .attr('fill', d => {
-                // Encontrar el color del AQI para la fecha y estación correspondientes
-                const aqiRecord = aqiOutputData.find(a => a.date === d.date.toISOString().split('T')[0] && a.stationId === d.stationId);
-                return aqiRecord ? aqiColors[aqiRecord[selectedContaminant]] : 'steelblue'; // Usar color por defecto si no hay registro de AQI
-            })
-            .attr('stroke', d => d.date.toISOString().split('T')[0] === fecha ? 'blue' : 'none') // Ajustar borde según la fecha
-            .attr('stroke-width', d => d.date.toISOString().split('T')[0] === fecha ? 3 : 0) // Ajustar ancho del borde según la fecha
-            .on('mouseover', function(event, d) {
-                // Mostrar tooltip
-                tooltip.style('display', 'inline');
-                
-                // Filtrar los datos para obtener la serie temporal completa de la misma fecha y stationId
-                const timeSeriesData = filteredAqData.filter(t => t.date === d.date.toISOString().split('T')[0] && t.stationId === d.stationId);
-            
-                // Crear un mini gráfico dentro del tooltip
-                const tooltipWidth = 350;
-                const tooltipHeight = 130;
-                const margin = { top: 10, right: 10, bottom: 20, left: 30 };
-            
-                // Limpiar el contenido anterior del tooltip
-                tooltip.html(''); // Limpia el contenido del tooltip
-            
-                // Estilo del tooltip
-                tooltip.style('background-color', 'white')
-                    .style('border', '1px solid black')
-                    .style('padding', '10px')
-                    .style('border-radius', '5px'); 
-            
-                // Añadir la información básica al tooltip
-                tooltip.append('div').html(`Station ID: ${d.stationId}<br>Date: ${d.date.toISOString().split('T')[0]}<br>${selectedContaminant}: ${d.average}`);
-            
-                // Añadir el contenedor SVG para la gráfica
-                const svg = tooltip.append('svg')
-                    .attr('width', tooltipWidth)
-                    .attr('height', tooltipHeight);
-            
-                const yScale = d3.scaleLinear()
-                    .domain([0, d3.max(timeSeriesData, t => +t[selectedContaminant])])
-                    .range([tooltipHeight - margin.bottom, margin.top]);
-            
-                // Eje X (Horas del día)
-                const numTicks = 7; // Número de horas a mostrar
-                const totalHours = 24; // Total de horas en un día
-                const hours = d3.range(0, totalHours, totalHours / numTicks).map(h => {
-                    const date = new Date(0, 0, 0, h); // Crear una fecha base con la hora correspondiente
-                    return d3.timeFormat('%I %p')(date); // Formato de hora en AM/PM
-                });
+    .data(averagedData)
+    .enter()
+    .append('circle')
+    .attr('cx', d => xScale(d.date))
+    .attr('cy', d => yScale(d.average))
+    .attr('r', d => {
+        const dataDate = new Date(d.date);
+        const selectedDate = new Date(formattedFechaSelected);
+        return dataDate.toISOString().split('T')[0] === selectedDate.toISOString().split('T')[0] ? 12 : 4; // Tamaño por defecto
+    })
+    .attr('stroke', d => {
+        const dataDate = new Date(d.date);
+        const selectedDate = new Date(formattedFechaSelected);
+        return dataDate.toISOString().split('T')[0] === selectedDate.toISOString().split('T')[0] ? 'blue' : 'none';
+    })
+    .attr('stroke-width', d => {
+        const dataDate = new Date(d.date);
+        const selectedDate = new Date(formattedFechaSelected);
+        return dataDate.toISOString().split('T')[0] === selectedDate.toISOString().split('T')[0] ? 2 : 0;
+    })
+    .attr('fill', d => {
+        const aqiRecord = filteredAqiOutputData.find(a => a.date === new Date(d.date).toISOString().split('T')[0] && a.stationId === d.stationId);
+        return aqiRecord ? aqiColors[aqiRecord[selectedContaminant]] : 'steelblue';
+    })
+    .on('mouseover', function(event, d) {
+        // Mostrar tooltip
+        tooltip.style('display', 'inline');
+        
+        // Filtrar los datos para obtener la serie temporal completa de la misma fecha y stationId
+        const timeSeriesData = filteredAqData.filter(t => t.date === d.date.toISOString().split('T')[0] && t.stationId === d.stationId);
+        
+        // Crear un mini gráfico dentro del tooltip
+        const tooltipWidth = 350;
+        const tooltipHeight = 130;
+        const margin = { top: 10, right: 10, bottom: 20, left: 30 };
 
-                // Crear una escala lineal para el eje X
-                const xScale = d3.scaleLinear()
-                    .domain([0, totalHours - 1]) // Dominio de 0 a 23
-                    .range([margin.left, tooltipWidth - margin.right]); // Rango del gráfico
+        // Limpiar el contenido anterior del tooltip
+        tooltip.html('');
+        
+        // Estilo del tooltip
+        tooltip.style('background-color', 'white')
+            .style('border', '1px solid black')
+            .style('padding', '10px')
+            .style('border-radius', '5px'); 
 
-                // Añadir el eje X al SVG
-                svg.append('g')
-                    .attr('transform', `translate(0,${tooltipHeight - margin.bottom})`)
-                    .call(d3.axisBottom(xScale)
-                        .tickValues(d3.range(0, totalHours, totalHours / numTicks)) // Mostrar las horas específicas
-                        .tickFormat((d) => {
-                            const hour = new Date(0, 0, 0, d); // Crear una fecha base
-                            return d3.timeFormat('%I %p')(hour); // Formato de hora en AM/PM
-                        })
-                    );
+        // Añadir la información básica al tooltip
+        tooltip.append('div').html(`Station ID: ${d.stationId}<br>Date: ${d.date.toISOString().split('T')[0]}<br>${selectedContaminant}: ${d.average}`);
 
-                // Eje Y (Valores del contaminante)
-                svg.append('g')
-                    .attr('transform', `translate(${margin.left},0)`)
-                    .call(d3.axisLeft(yScale));
-            
-                // Línea de la serie temporal
-                const line = d3.line()
-                    .x((d, i) => xScale(i))
-                    .y(d => yScale(+d[selectedContaminant]));
-            
-                svg.append('path')
-                    .datum(timeSeriesData)
-                    .attr('fill', 'none')
-                    .attr('stroke', 'steelblue')
-                    .attr('stroke-width', 2)
-                    .attr('d', line);
-            
-                // Obtener las dimensiones del gráfico para calcular los sectores
-                const chartWidth = d3.select('svg').node().clientWidth;
-                const chartHeight = d3.select('svg').node().clientHeight;
-            
-                // Posicionar el tooltip en función de la ubicación del mouse y el sector
-                const [mouseX, mouseY] = d3.pointer(event);
-                let tooltipX, tooltipY;
-            
-                // Dividir el gráfico en 4 sectores y ajustar la posición del tooltip
-                if (mouseX < chartWidth / 2 && mouseY < chartHeight / 2) { // Superior izquierda
-                    tooltipX = mouseX + 15;  // Hacia la derecha del punto
-                    tooltipY = mouseY;  // Mismo nivel
-                } else if (mouseX >= chartWidth / 2 && mouseY < chartHeight / 2) { // Superior derecha
-                    tooltipX = mouseX - tooltipWidth - 30; // Hacia la izquierda del punto
-                    tooltipY = mouseY;  // Mismo nivel
-                } else if (mouseX < chartWidth / 2 && mouseY >= chartHeight / 2) { // Inferior izquierda
-                    tooltipX = mouseX + 15;  // Hacia la derecha del punto
-                    tooltipY = mouseY - tooltipHeight - 30; // Un poco arriba del punto
-                } else if (mouseX >= chartWidth / 2 && mouseY >= chartHeight / 2) { // Inferior derecha
-                    tooltipX = mouseX - tooltipWidth - 30; // Hacia la izquierda del punto
-                    tooltipY = mouseY - tooltipHeight - 30; // Un poco arriba del punto
-                }
-            
-                tooltip
-                    .style('left', `${tooltipX}px`)  // Ajusta la posición del tooltip
-                    .style('top', `${tooltipY}px`);  // Ajusta la posición del tooltip
-            
-                // Cambiar tamaño y agregar borde al pasar el mouse
-                d3.select(this)
-                    .attr('r', 8) // Aumentar el radio del círculo
-                    .attr('stroke', 'blue') // Agregar borde azul
-                    .attr('stroke-width', 2); // Ancho del borde
-            })
-            .on('mouseout', function(event, d) {
-                // Ocultar tooltip y restaurar tamaño y color del punto
-                tooltip.style('display', 'none');
-                d3.select(this)
-                    .attr('r', d => d.date.toISOString().split('T')[0] === fecha ? 12 : 4) // Restaurar el radio original
-                    .attr('stroke', d => d.date.toISOString().split('T')[0] === fecha ? 'blue' : 'none'); // Eliminar el borde
-            })
+        // Añadir el contenedor SVG para la gráfica
+        const svg = tooltip.append('svg')
+            .attr('width', tooltipWidth)
+            .attr('height', tooltipHeight);
+        
+        const yScale = d3.scaleLinear()
+            .domain([0, d3.max(timeSeriesData, t => +t[selectedContaminant])])
+            .range([tooltipHeight - margin.bottom, margin.top]);
+
+        // Eje X (Horas del día)
+        const numTicks = 7;
+        const totalHours = 24;
+        const hours = d3.range(0, totalHours, totalHours / numTicks).map(h => {
+            const date = new Date(0, 0, 0, h);
+            return d3.timeFormat('%I %p')(date);
+        });
+
+        // Crear una escala lineal para el eje X
+        const xScale = d3.scaleLinear()
+            .domain([0, totalHours - 1])
+            .range([margin.left, tooltipWidth - margin.right]);
+
+        // Añadir el eje X al SVG
+        svg.append('g')
+            .attr('transform', `translate(0,${tooltipHeight - margin.bottom})`)
+            .call(d3.axisBottom(xScale)
+                .tickValues(d3.range(0, totalHours, totalHours / numTicks))
+                .tickFormat((d) => {
+                    const hour = new Date(0, 0, 0, d);
+                    return d3.timeFormat('%I %p')(hour);
+                })
+            );
+
+        // Eje Y (Valores del contaminante)
+        svg.append('g')
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(yScale));
+
+        // Línea de la serie temporal
+        const line = d3.line()
+            .x((d, i) => xScale(i))
+            .y(d => yScale(+d[selectedContaminant]));
+
+        svg.append('path')
+            .datum(timeSeriesData)
+            .attr('fill', 'none')
+            .attr('stroke', 'steelblue')
+            .attr('stroke-width', 2)
+            .attr('d', line);
+
+        // Posicionar el tooltip en función de la ubicación del mouse
+        const [mouseX, mouseY] = d3.pointer(event);
+        const chartWidth = d3.select('svg').node().clientWidth;
+        const chartHeight = d3.select('svg').node().clientHeight;
+        let tooltipX, tooltipY;
+
+        if (mouseX < chartWidth / 2 && mouseY < chartHeight / 2) {
+            tooltipX = mouseX + 15;
+            tooltipY = mouseY;
+        } else if (mouseX >= chartWidth / 2 && mouseY < chartHeight / 2) {
+            tooltipX = mouseX - tooltipWidth - 30;
+            tooltipY = mouseY;
+        } else if (mouseX < chartWidth / 2 && mouseY >= chartHeight / 2) {
+            tooltipX = mouseX + 15;
+            tooltipY = mouseY - tooltipHeight - 30;
+        } else {
+            tooltipX = mouseX - tooltipWidth - 30;
+            tooltipY = mouseY - tooltipHeight - 30;
+        }
+
+        tooltip
+            .style('left', `${tooltipX}px`)
+            .style('top', `${tooltipY}px`);
+
+        // Cambiar tamaño y agregar borde al pasar el mouse
+        const dataDate = new Date(d.date);
+        const selectedDate = new Date(formattedFechaSelected);
+        
+        // Solo cambiar tamaño si no es el punto seleccionado
+        if (dataDate.toISOString().split('T')[0] !== selectedDate.toISOString().split('T')[0]) {
+            d3.select(this)
+                .attr('r', 8)
+                .attr('stroke', 'blue')
+                .attr('stroke-width', 2);
+        }
+    })
+    .on('mouseout', function(event, d) {
+        // Ocultar tooltip
+        tooltip.style('display', 'none');
+
+        const dataDate = new Date(d.date);
+        const selectedDate = new Date(formattedFechaSelected);
+        
+        // Restaurar el tamaño y color del punto solo si no es el punto seleccionado
+        if (dataDate.toISOString().split('T')[0] !== selectedDate.toISOString().split('T')[0]) {
+            d3.select(this)
+                .attr('r', 4)
+                .attr('stroke', 'none');
+        }
+    })
             .on('click', function(event, d) {
                 // Obtener el índice del contaminante seleccionado
                 const aqAttributes = ['PM2_5', 'PM10', 'NO2', 'CO', 'O3', 'SO2'];
@@ -755,7 +779,7 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha, contaminate) {
 
                 // Log del evento de clic
                 console.log(`Station ID: ${d.stationId}, Date: ${d.date.toISOString().split('T')[0]}, ${selectedContaminant}: ${d.average}`);
-                console.log(fecha);
+                console.log(fecha_selected);
                 console.log(contaminate);
             });
 
