@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualización de Contaminantes</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        select, button, input {
+            margin: 10px;
+        }
+        .chart-container {
+            margin: 10px 0;
+        }
+        .chart {
+            /* Sin tamaño predeterminado; será controlado por los sliders */
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            shape-rendering: crispEdges;
+        }
+        .area {
+            opacity: 0.7;
+        }
+        .tooltip {
+            position: absolute;
+            text-align: center;
+            padding: 5px;
+            font: 12px sans-serif;
+            background: lightsteelblue;
+            border: 1px solid steelblue;
+            border-radius: 3px;
+            pointer-events: none;
+            opacity: 0; /* Inicialmente oculto */
+        }
+        .highlight {
+            fill: rgb(248, 0, 0); /* Color para resaltar los puntos */
+        }
+        .line {
+            stroke: red; /* Color de la línea vertical */
+            stroke-width: 1;
+            stroke-dasharray: 5, 5; /* Línea punteada */
+        }
+    </style>
+</head>
+<body>
+    <h1>Visualización de Contaminantes</h1>
+    
+    <label for="stationId">Seleccione Station ID:</label>
+    <select id="stationId"></select>
+    
+    <label for="date">Seleccione Fecha:</label>
+    <input type="date" id="date">
+
+    <label for="width">Ancho del gráfico:</label>
+    <input type="range" id="width" min="300" max="1200" value="600"> <!-- Slider para el ancho -->
+    <span id="widthValue">600</span> <!-- Mostrar valor actual del ancho -->
+    
+    <label for="height">Altura del gráfico:</label>
+    <input type="range" id="height" min="50" max="600" value="220"> <!-- Slider para la altura -->
+    <span id="heightValue">220</span> <!-- Mostrar valor actual de la altura -->
+
+    <button id="update">Actualizar Gráficos</button>
+
+    <div id="charts"></div>
+    <div class="tooltip" id="tooltip"></div> <!-- Tooltip para los valores -->
+
+    <script>
+        const csvFilePath = 'data/beijing_17_18_aq.csv'; // Cambiar según sea necesario
+        let data = [];
+        let stationIds = new Set();
+        let minDate, maxDate;
+
+        d3.csv(csvFilePath).then(loadedData => {
+            data = loadedData.map(d => {
+                return {
+                    stationId: d.stationId,
+                    date: d.date,
+                    time: d.time,
+                    PM2_5: +d.PM2_5,
+                    PM10: +d.PM10,
+                    NO2: +d.NO2,
+                    CO: +d.CO,
+                    O3: +d.O3,
+                    SO2: +d.SO2
+                };
+            });
+            data.forEach(d => stationIds.add(d.stationId));
+
+            // Obtener fechas mínimas y máximas
+            minDate = d3.min(data, d => new Date(d.date));
+            maxDate = d3.max(data, d => new Date(d.date));
+
+            // Establecer los valores min y max para el calendario
+            document.getElementById("date").min = minDate.toISOString().split("T")[0];
+            document.getElementById("date").max = maxDate.toISOString().split("T")[0];
+
+            // Establecer una fecha aleatoria como valor predeterminado dentro del rango
+            const randomDate = new Date(minDate.getTime() + Math.random() * (maxDate - minDate));
+            document.getElementById("date").value = randomDate.toISOString().split("T")[0];
+
+            stationIds.forEach(id => {
+                d3.select("#stationId").append("option").text(id).attr("value", id);
+            });
+        });
+
+        // Función para actualizar gráficos al mover los sliders
+        function updateCharts() {
+            const selectedStation = document.getElementById("stationId").value;
+            const selectedDate = document.getElementById("date").value;
+            const width = +document.getElementById("width").value; // Ancho del gráfico
+            const height = +document.getElementById("height").value; // Altura del gráfico
+            
+            drawCharts(selectedStation, selectedDate, width, height);
+        }
+
+        document.getElementById("update").addEventListener("click", updateCharts);
+
+        // Evento para actualizar automáticamente al mover los sliders
+        document.getElementById("width").addEventListener("input", () => {
+            document.getElementById("widthValue").textContent = document.getElementById("width").value; // Mostrar el valor actual
+            updateCharts();
+        });
+
+        document.getElementById("height").addEventListener("input", () => {
+            document.getElementById("heightValue").textContent = document.getElementById("height").value; // Mostrar el valor actual
+            updateCharts();
+        });
+
+        function drawCharts(selectedStation, selectedDate, width, height) {
+            d3.select("#charts").selectAll("*").remove();
+
+            const pollutants = ["PM2_5", "PM10", "NO2", "CO", "O3", "SO2"];
+            const colors = {
+                "PM2_5": "steelblue",
+                "PM10": "orange",
+                "NO2": "green",
+                "CO": "red",
+                "O3": "purple",
+                "SO2": "brown"
+            };
+
+            const charts = pollutants.map(pollutant => {
+                // Filtrar todos los datos para la estación y la fecha seleccionada
+                const dataForPollutant = data.filter(d => d.stationId === selectedStation && d.date === selectedDate);
+
+                const chartContainer = d3.select("#charts").append("div").attr("class", "chart-container");
+                const svg = chartContainer.append("svg")
+                    .attr("width", width) // Usar el ancho especificado por el usuario
+                    .attr("height", height) // Usar la altura especificada por el usuario
+                    .attr("class", "chart");
+
+                const x = d3.scaleTime()
+                    .domain(d3.extent(dataForPollutant, d => new Date(`${d.date}T${d.time}`)))
+                    .range([0, width - 20]); // Ajustar el rango a partir del ancho del SVG
+
+                const y = d3.scaleLinear()
+                    .domain([0, d3.max(dataForPollutant, d => d[pollutant])])
+                    .range([height - 20, 0]); // Ajustar el rango a partir de la altura del SVG
+
+                const area = d3.area()
+                    .x(d => x(new Date(`${d.date}T${d.time}`)))
+                    .y0(height - 20) // Ajustado para alinearse con la nueva altura
+                    .y1(d => y(d[pollutant]));
+
+                svg.append("path")
+                    .datum(dataForPollutant)
+                    .attr("fill", colors[pollutant])  // Asignar color específico
+                    .attr("class", "area")
+                    .attr("d", area);
+
+                // Eje X
+                svg.append("g")
+                    .attr("class", "axis")
+                    .attr("transform", `translate(0,${height - 20})`) // Ajustado para alinearse con la nueva altura
+                    .call(d3.axisBottom(x).tickFormat(d3.timeFormat("%H:%M")));
+
+                // Eje Y
+                svg.append("g")
+                    .attr("class", "axis")
+                    .call(d3.axisLeft(y));
+    
+                svg.append("text")
+                    .attr("transform", "rotate(0)") // Rotar el texto para el eje Y
+                    .attr("x", 30) // Posición del texto (X)
+                    .attr("y", 20) // Posición del texto (Y)
+                    .attr("text-anchor", "middle")
+                    .text(pollutant); // Etiqueta eje Y
+
+                // Tooltip para mostrar valores
+                const tooltip = d3.select("#tooltip");
+
+                // Agregar todos los puntos para cada contaminante (todas las horas del día)
+                const circles = svg.selectAll("circle")
+                    .data(dataForPollutant)
+                    .enter()
+                    .append("circle")
+                    .attr("cx", d => x(new Date(`${d.date}T${d.time}`)))
+                    .attr("cy", d => y(d[pollutant]))
+                    .attr("r", 2) // Radio del círculo
+                    .attr("fill", colors[pollutant]) // Color del círculo correspondiente al contaminante
+                    .on("mouseover", (event, d) => {
+                        // Obtener la posición X de la hora seleccionada
+                        const xPos = x(new Date(`${d.date}T${d.time}`));
+
+                        // Dibujar línea punteada vertical que atraviesa todos los gráficos
+                        d3.selectAll("line").remove(); // Limpiar líneas anteriores
+                        d3.selectAll(".line").remove(); // Eliminar líneas en otras gráficas
+                        d3.selectAll("svg").each(function() {
+                            const svg = d3.select(this);
+                            svg.append("line")
+                                .attr("class", "line")
+                                .attr("x1", xPos)
+                                .attr("x2", xPos)
+                                .attr("y1", 0)
+                                .attr("y2", height); // Extender hasta la parte inferior
+                        });
+
+                        // Resaltar puntos correspondientes en otros gráficos
+                        d3.selectAll("circle").attr("class", function(d2) {
+                            return d2.time === d.time ? "highlight" : ""; // Resaltar puntos en otras estaciones
+                        });
+
+                        // Mostrar tooltip en todos los gráficos correspondientes a la hora seleccionada
+                        d3.selectAll("circle").filter(d2 => d2.time === d.time)
+                            .each(function(d2) {
+                                const [x, y] = [event.pageX, event.pageY]; // Posición del mouse
+                                tooltip.transition().duration(200).style("opacity", 0.9);
+                                tooltip.html(`Hora: ${d2.time}<br>${d2.stationId}<br>${pollutant}: ${d2[pollutant]} µg/m³`)
+                                    .style("left", (x + 5) + "px")
+                                    .style("top", (y - 28) + "px");
+                            });
+                    })
+                    .on("mouseout", () => {
+                        tooltip.transition().duration(500).style("opacity", 0);
+                        d3.selectAll("circle").attr("class", ""); // Quitar el resaltado
+                        d3.selectAll("line").remove(); // Eliminar la línea vertical
+                    });
+
+                return { svg, dataForPollutant }; // Guardar SVG para uso posterior
+            });
+        }
+    </script>
+</body>
+</html>

@@ -25,7 +25,7 @@ p {
 }
 
 .sidebar {
-    width: 300px;
+    width: 234px;
     padding: 20px;
     border-right: 2px solid #ddd;
     background-color: #ffffff;
@@ -101,8 +101,8 @@ p {
 .chart-container-pca {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
     top: 20px; /* Espaciado desde el borde superior */
-    left: 400px; /* Espaciado desde el borde izquierdo */
-    width: 30vw; /* Ancho de la ventana de visualización */
+    left: 295px; /* Espaciado desde el borde izquierdo */
+    width: 27vw; /* Ancho de la ventana de visualización */
     height: 46vh; /* Alto de la ventana de visualización */
     border: 1px solid #ccc; /* Borde de la ventana */
     border-radius: 10px; /* Bordes redondeados */
@@ -122,11 +122,58 @@ p {
     height: 50px;
 }
 
+.chart-container-map {
+    position: absolute; /* Posiciona el contenedor de manera absoluta */
+    top: 20px; /* Espaciado desde el borde superior */
+    left: 1375px; /* Espaciado desde el borde izquierdo */
+    width: 27vw; /* Ancho de la ventana de visualización */
+    height: 46vh; /* Alto de la ventana de visualización */
+    border: 1px solid #ccc; /* Borde de la ventana */
+    border-radius: 10px; /* Bordes redondeados */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra de la ventana */
+    background: #ffffff;
+    overflow: hidden; /* Oculta el contenido desbordado */
+    display: flex;
+    flex-direction: column; /* Coloca el título encima del gráfico */
+    z-index: 1; /* Asegura que el contenedor esté sobre otros elementos */
+}
+.chart-header-map {
+    background-color: #d3cfcf; /* Fondo del encabezado */
+    color: #000000; /* Color del texto del encabezado */
+    padding: 1px; /* Espaciado dentro del encabezado */
+    border-bottom: 1px solid #ffffff; /* Línea divisoria debajo del encabezado */
+    text-align: center; /* Centra el texto del encabezado */
+    height: 50px;
+}
+.chart-container-compare {
+    position: absolute; /* Posiciona el contenedor de manera absoluta */
+    top: 470px; /* Espaciado desde el borde superior */
+    left: 1337px; /* Espaciado desde el borde izquierdo */
+    width: 29vw; /* Ancho de la ventana de visualización */
+    height: 46vh; /* Alto de la ventana de visualización */
+    border: 1px solid #ccc; /* Borde de la ventana */
+    border-radius: 10px; /* Bordes redondeados */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra de la ventana */
+    background: #ffffff;
+    overflow: hidden; /* Oculta el contenido desbordado */
+    display: flex;
+    flex-direction: column; /* Coloca el título encima del gráfico */
+    z-index: 1; /* Asegura que el contenedor esté sobre otros elementos */
+}
+.chart-header-compare {
+    background-color: #d3cfcf; /* Fondo del encabezado */
+    color: #000000; /* Color del texto del encabezado */
+    padding: 1px; /* Espaciado dentro del encabezado */
+    border-bottom: 1px solid #ffffff; /* Línea divisoria debajo del encabezado */
+    text-align: center; /* Centra el texto del encabezado */
+    height: 50px;
+}
+
 .chart-container-tree-rad {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
     top: 20px; /* Espaciado desde el borde superior */
-    left: 1000px; /* Espaciado desde el borde izquierdo */
-    width: 30vw; /* Ancho de la ventana de visualización */
+    left: 835px; /* Espaciado desde el borde izquierdo */
+    width: 27vw; /* Ancho de la ventana de visualización */
     height: 46vh; /* Alto de la ventana de visualización */
     border: 1px solid #ccc; /* Borde de la ventana */
     border-radius: 10px; /* Bordes redondeados */
@@ -151,8 +198,8 @@ p {
 .chart-container-time-temporal {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
     top: 470px; /* Espaciado desde el borde superior */
-    left: 400px; /* Espaciado desde el borde izquierdo */
-    width: 70vw; /* Ancho de la ventana de visualización */
+    left: 295px; /* Espaciado desde el borde izquierdo */
+    width: 53vw; /* Ancho de la ventana de visualización */
     height: 46vh; /* Alto de la ventana de visualización */
     border: 1px solid #ccc; /* Borde de la ventana */
     border-radius: 10px; /* Bordes redondeados */
@@ -201,14 +248,14 @@ select, input[type="date"] {
     padding: 5px;
 }
 
-.MuiFormControl-root {
-    margin-right: 10px;
-    width: 100%;
+.date-range-container {
+    display: flex;
+    align-items: center; /* Centra verticalmente los elementos */
 }
 
 .MuiTextField-root {
-    margin-right: 10px;
-    margin-bottom: 10px;
+    margin-right: 20px; /* Espaciado a la derecha */
+    margin-bottom: 10px; /* Espaciado abajo, si es necesario */
 }
 
 
@@ -317,12 +364,13 @@ button:hover {
 /* SERIE TEMPORAL */
 .legend {
     position: absolute;
-    right: 0;
-    top: 90px;
-    margin-left: 20px;
-    margin-right: 40px;
+    left: 28%;
+    bottom: 8px; /* Ajusta la distancia desde la parte inferior */
+    transform: translateX(-50%); /* Centra horizontalmente la leyenda */
+    display: flex;
+    justify-content: center;
+    gap: 10px; /* Espacio entre los elementos de la leyenda */
     padding: 10px;
-
     border-radius: 5px;
     font-size: 14px;
 }
@@ -334,20 +382,21 @@ button:hover {
 .legend-item {
     display: flex;
     align-items: center;
-    margin-bottom: 5px;
+    margin-right: 10px; /* Ajusta el espacio entre cada ítem */
 }
 
 .legend-color {
     display: inline-block;
-    width: 20px;
-    height: 20px;
+    width: 15px;
+    height: 15px;
     margin-right: 10px;
     border: 1px solid #000;
 }
 
 .legend-label {
-    font-size: 14px;
+    font-size: 16px;
 }
+
 .legend-line-dashed {
     display: inline-block;
     width: 20px; /* Ajusta el tamaño según sea necesario */
@@ -357,6 +406,11 @@ button:hover {
     background-repeat: repeat-x;
     margin-right: 10px;
 }
+
+
+
+
+/* para el pca */
 .chart-header-pca {
     position: relative;
     width: 100%; /* Asegura que el contenedor de la leyenda use todo el ancho disponible */
@@ -375,7 +429,7 @@ button:hover {
 }
 
 .legend-item-pca {
-    padding: 5px 15px;
+    padding: 5px 10px;
     color: rgb(0, 0, 0);
     font-weight: bold;
     margin-right: 5px; /* Espaciado entre ítems */

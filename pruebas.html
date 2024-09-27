@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serie Temporal con Gráfico de Barras Apiladas</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .chart-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .chart {
+            width: 800px;
+            height: 400px;
+        }
+
+        .axis text {
+            font-size: 12px;
+        }
+
+        .axis line,
+        .axis path {
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
+
+        .bar {
+            stroke: #000;
+            stroke-width: 1px;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: white;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .legend {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: inline-block;
+            margin-right: 15px;
+        }
+
+        .legend-color {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Gráfico de Barras Apiladas - Calidad del Aire</h1>
+
+    <div class="controls">
+        <label for="stationSelect">Station ID:</label>
+        <select id="stationSelect"></select>
+
+        <label for="viewType">Ver:</label>
+        <select id="viewType">
+            <option value="day">Por Día</option>
+            <option value="range">Por Rango</option>
+        </select>
+
+        <label for="startDate">Fecha:</label>
+        <input type="date" id="startDate">
+
+        <label for="endDate">Hasta:</label>
+        <input type="date" id="endDate" disabled>
+
+        <button id="updateButton">Actualizar Gráfico</button>
+    </div>
+
+    <div class="chart-container">
+        <svg class="chart"></svg>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <script>
+        // Dimensiones del gráfico
+        const margin = { top: 40, right: 30, bottom: 50, left: 50 },
+              width = 800 - margin.left - margin.right,
+              height = 400 - margin.top - margin.bottom;
+
+        const svg = d3.select(".chart")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        const xScale = d3.scaleBand().range([0, width]).padding(0.1);
+        const yScale = d3.scaleLinear().range([height, 0]);
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10); // Colores para las series
+
+        const xAxis = d3.axisBottom(xScale);
+        const yAxis = d3.axisLeft(yScale);
+
+        svg.append("g")
+            .attr("class", "x-axis")
+            .attr("transform", "translate(0," + height + ")");
+
+        svg.append("g")
+            .attr("class", "y-axis");
+
+        const pollutants = ["PM2_5", "PM10", "NO2", "CO", "O3", "SO2"];  // Los contaminantes
+
+        let rawData;
+
+        // Leer el archivo CSV
+        d3.csv("data/beijing_17_18_aq.csv", d => {
+            return {
+                stationId: d.stationId,
+                date: new Date(d.date + 'T' + d.time),
+                hour: d.time.split(':')[0],  // Para manejar las horas cuando se elija por día
+                PM2_5: +d.PM2_5,
+                PM10: +d.PM10,
+                NO2: +d.NO2,
+                CO: +d.CO,
+                O3: +d.O3,
+                SO2: +d.SO2
+            };
+        }).then(data => {
+            rawData = data;
+
+            // Obtener las fechas mínima y máxima de los datos
+            const minDate = d3.min(data, d => d.date);
+            const maxDate = d3.max(data, d => d.date);
+
+            // Establecer el valor mínimo y máximo para los inputs de fecha
+            d3.select("#startDate")
+                .attr("min", formatDate(minDate))
+                .attr("max", formatDate(maxDate))
+                .attr("value", formatDate(minDate));
+
+            d3.select("#endDate")
+                .attr("min", formatDate(minDate))
+                .attr("max", formatDate(maxDate))
+                .attr("value", formatDate(maxDate));
+
+            // Poblar el select con los station IDs únicos
+            const stationIds = [...new Set(data.map(d => d.stationId))];
+            const stationSelect = d3.select("#stationSelect");
+            stationIds.forEach(id => {
+                stationSelect.append("option").text(id).attr("value", id);
+            });
+
+            // Crear la leyenda de los colores
+            createLegend(pollutants);
+
+            // Actualizar el estado de los inputs según el tipo de vista
+            d3.select("#viewType").on("change", function() {
+                const viewType = d3.select(this).property("value");
+                if (viewType === "day") {
+                    d3.select("#endDate").attr("disabled", true);
+                } else {
+                    d3.select("#endDate").attr("disabled", false);
+                }
+            });
+
+            // Actualizar gráfico al hacer clic en el botón
+            d3.select("#updateButton").on("click", updateChart);
+        });
+
+        // Formato de fecha en YYYY-MM-DD para los inputs de fecha
+        function formatDate(date) {
+            const d = new Date(date);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Crear la leyenda de los colores
+        function createLegend(pollutants) {
+            const legend = d3.select("#legend");
+            pollutants.forEach((pollutant, i) => {
+                const legendItem = legend.append("div").attr("class", "legend-item");
+                legendItem.append("div")
+                    .attr("class", "legend-color")
+                    .style("background-color", colorScale(pollutant));
+                legendItem.append("span").text(pollutant);
+            });
+        }
+
+        // Función para agregar los valores por día
+        function aggregateByDay(data) {
+            const groupedData = d3.groups(data, d => formatDate(d.date));
+            return groupedData.map(([date, values]) => {
+                const sumData = {};
+                sumData.date = new Date(date);
+                pollutants.forEach(pollutant => {
+                    sumData[pollutant] = d3.sum(values, d => d[pollutant]);
+                });
+                return sumData;
+            });
+        }
+
+        // Función para agregar los valores por hora
+        function aggregateByHour(data) {
+            const groupedData = d3.groups(data, d => d.hour);
+            return groupedData.map(([hour, values]) => {
+                const sumData = {};
+                sumData.hour = hour;
+                pollutants.forEach(pollutant => {
+                    sumData[pollutant] = d3.sum(values, d => d[pollutant]);
+                });
+                return sumData;
+            });
+        }
+
+        // Función para actualizar el gráfico
+        function updateChart() {
+            const selectedStationId = d3.select("#stationSelect").property("value");
+            const startDate = new Date(d3.select("#startDate").property("value"));
+            startDate.setDate(startDate.getDate() + 1);  // Sumar un día a la fecha de inicio
+            const viewType = d3.select("#viewType").property("value");
+
+            // Eliminar las barras anteriores antes de actualizar el gráfico
+            svg.selectAll(".bar").remove();
+            svg.selectAll("rect").remove();
+
+            let filteredData;
+
+            if (viewType === "day") {
+                // Si se selecciona "Por Día", se filtran los datos del día seleccionado
+                filteredData = rawData.filter(d => {
+                    return d.stationId === selectedStationId && formatDate(d.date) === formatDate(startDate);
+                });
+                filteredData = aggregateByHour(filteredData);
+                // Establecer las horas como dominio de la escala x
+                xScale.domain(filteredData.map(d => d.hour));  // Usar las horas agregadas
+            } else {
+                const endDate = new Date(d3.select("#endDate").property("value"));
+                // Si se selecciona "Por Rango", se filtran los datos en el rango de fechas
+                filteredData = rawData.filter(d => {
+                    return d.stationId === selectedStationId && d.date >= startDate && d.date <= endDate;
+                });
+                filteredData = aggregateByDay(filteredData);
+                xScale.domain(filteredData.map(d => formatDate(d.date)));  // Usar las fechas agregadas
+            }
+
+            const stack = d3.stack().keys(pollutants);
+            const series = stack(filteredData);
+
+            yScale.domain([0, d3.max(series, s => d3.max(s, d => d[1]))]);
+
+            svg.select(".x-axis")
+                .transition().duration(500)
+                .call(xAxis);
+
+            svg.select(".y-axis")
+                .transition().duration(500)
+                .call(yAxis);
+
+            // Unión de datos
+            const bars = svg.selectAll(".bar")
+                .data(series, d => d.key)
+                .enter().append("g")
+                .attr("class", "bar")
+                .attr("fill", d => colorScale(d.key));
+
+            bars.selectAll("rect")
+                .data(d => d)
+                .enter().append("rect")
+                .attr("x", (d, i) => xScale(viewType === "day" ? d.data.hour : formatDate(d.data.date)))
+                .attr("y", d => yScale(d[1]))
+                .attr("height", d => yScale(d[0]) - yScale(d[1]))
+                .attr("width", xScale.bandwidth()) // Usar el ancho de banda de la escala x
+                .append("title")  // Tooltip con los valores
+                .text(d => `Total: ${d[1] - d[0]}`);
+        }
+    </script>
+</body>
+</html>

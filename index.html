@@ -43,9 +43,12 @@
 
                 <div>
                     <label for="dateRange">Seleccionar Rango de Fechas:</label>
+                </div>
+                <div class="date-range-container">
                     <input type="date" id="startDate" class="MuiTextField-root">
                     <input type="date" id="endDate" class="MuiTextField-root">
                 </div>
+                
                 <div>
                     <label>Seleccionar Contaminante:</label>
                     <div class="radio-group">
@@ -96,7 +99,16 @@
             <div id="tooltip-pca" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
             <div id="pca-chart" class="chart"></div> <!-- Div para el gráfico PCA -->
         </div>
-        
+
+        <!-- PARA EL MAPA DE BEINNIGN -->
+        <div class="chart-container-map">
+            <div class="chart-header-map">
+                <h2>Mapa Geografico de Beijing</h2>
+
+            </div>
+            <div id="tooltip-map" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
+            <div id="map-chart" class="chart"></div> <!-- Div para el gráfico PCA -->
+        </div>
         
         <div class="chart-container-tree-rad">
             <div class="chart-header-tree-rad">
@@ -105,7 +117,7 @@
         
             <div class="controls">
                 <!-- Controles de atributos -->
-                <label><input type="checkbox" class="attribute-checkbox" value="PM2_5" checked> PM2_5</label>
+                <!-- <label><input type="checkbox" class="attribute-checkbox" value="PM2_5" checked> PM2_5</label>
                 <label><input type="checkbox" class="attribute-checkbox" value="PM10" checked> PM10</label>
                 <label><input type="checkbox" class="attribute-checkbox" value="NO2" checked> NO2</label>
                 <label><input type="checkbox" class="attribute-checkbox" value="CO" checked> CO</label>
@@ -113,7 +125,7 @@
                 <label><input type="checkbox" class="attribute-checkbox" value="SO2" checked> SO2</label>
                 <label><input type="checkbox" class="attribute-checkbox" value="temperature" checked> Temperature</label>
                 <label><input type="checkbox" class="attribute-checkbox" value="pressure" checked> Pressure</label>
-                <label><input type="checkbox" class="attribute-checkbox" value="humidity" checked> Humidity</label>
+                <label><input type="checkbox" class="attribute-checkbox" value="humidity" checked> Humidity</label> -->
             </div>
             <!-- Leyenda del degradado -->
             <div class="gradient-legend">
@@ -169,6 +181,15 @@
                 </div>
 
             </div>
+        </div>
+        <!-- GRAFICA PARA MI SERIE COMPARACION -->
+        <!-- PARA EL MAPA DE BEINNIGN -->
+        <div class="chart-container-compare">
+            <div class="chart-header-compare">
+                <h2>Comparacion de Ciudades</h2>
+            </div>
+            <div id="tooltip-compare" style="position: absolute; background-color: rgba(255, 255, 255, 0.8); color: rgb(0, 0, 0); padding: 5px; border-radius: 5px; pointer-events: none; display: none;"></div>
+            <div id="compare-chart" class="chart"></div> <!-- Div para el gráfico PCA -->
         </div>
 
         

@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    const defaultDate = '2018-01-01'; // Cambia esto a la fecha que desees
+    const defaultDate = '2017-09-07'; // Cambia esto a la fecha que desees
     startDateInput.value = defaultDate; // Establece la fecha de inicio
     endDateInput.value = defaultDate; // Establece la fecha de fin
     const correlationMatrix = null;
@@ -357,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             radio.checked = true;
                         }
                     });
+                    
                     updateTimeSeriesChart(correlationMatrix, formattedDate, contaminant);
                 
                     console.log(`Datos del nodo:
@@ -528,6 +529,16 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha_selected, contaminate) 
     const endDate = new Date(endDateInput.value);
     const selectedContaminant = document.querySelector('input[name="contaminant"]:checked').value; // Contaminante seleccionado
 
+
+    // Añadir evento de cambio a los radios de contaminantes
+    contaminantRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            const selectedContaminant = document.querySelector('input[name="contaminant"]:checked').value; // Contaminante seleccionado
+            updateTimeSeriesChart(correlationMatrix, fecha_selected, selectedContaminant); // Actualiza la serie temporal
+        });
+    });
+
+
     // Cargar los datos necesarios para la serie temporal
     Promise.all([
         d3.csv('data/beijing_17_18_aq.csv'),
@@ -570,8 +581,8 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha_selected, contaminate) 
         // Limpia el gráfico anterior
         timeTemporalDiv.selectAll('*').remove();
 
-        const width = 1200; // Ancho del gráfico
-        const height = 360; // Alto del gráfico
+        const width = 1020; // Ancho del gráfico
+        const height = 330; // Alto del gráfico
         const margin = { top: 20, right: 30, bottom: 30, left: 50 };
 
         const svg = timeTemporalDiv.append('svg')
