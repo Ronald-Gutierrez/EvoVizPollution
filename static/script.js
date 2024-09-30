@@ -882,3 +882,383 @@ function addSeasonalBackground(svg, xScale, height, margin) {
 // window.addEventListener('load', initializeChart);
 
 });
+
+
+//=======================================================================================================
+// VIZUALIZACION DE MAPA
+//
+// Define las dimensiones del mapa
+const width_MAP = 800;
+const height_MAP = 1100;
+
+// Crea un elemento SVG para contener el mapa
+const svg = d3.select("#map").append("svg")
+    .attr("width", width_MAP)
+    .attr("height", height_MAP);
+
+// Crea un elemento 'g' para el mapa
+const g = svg.append("g");
+
+// Define el comportamiento de zoom
+const zoom = d3.zoom().on("zoom", (event) => {
+    g.attr("transform", event.transform);
+});
+
+// Aplica el comportamiento de zoom al elemento SVG
+svg.call(zoom);
+
+// Define la proyección para convertir coordenadas GeoJSON a coordenadas de pantalla
+const projection = d3.geoMercator()
+    .center([116.4074, 39.9042]) // Centra el mapa en Beijing
+    .scale(10000) // Ajusta la escala para que quepa en el tamaño del mapa
+    .translate([width_MAP / 4.5, height_MAP / 4]);
+
+// Define el generador de ruta para convertir rutas GeoJSON a rutas SVG
+const path = d3.geoPath().projection(projection);
+
+// Carga los datos GeoJSON
+d3.json("map/beijing.json")
+    .then(data => {
+        // Enlaza los datos y crea un path por cada entidad GeoJSON
+        g.selectAll("path")
+            .data(data.features)
+            .enter().append("path")
+            .attr("d", path)
+            .attr("fill", "#c6dbef")
+            .attr("stroke", "#000")
+            .attr("stroke-width", 1)
+            .on("mouseover", function(event, d) {
+                d3.select(this)
+                    .attr("fill", "#9ecae1")
+                    .attr("stroke-width", 2);
+            })
+            .on("mouseout", function(event, d) {
+                d3.select(this)
+                    .attr("fill", "#c6dbef")
+                    .attr("stroke-width", 1);
+            });
+    })
+    .catch(error => console.error('Error cargando o parseando los datos:', error));
+    
+
+function updateMapWithDate(selectedDate, stationData) {
+    // Crear un tooltip local para esta función
+    var tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip") // Usa la clase 'tooltip' para aplicar los estilos
+        .style("position", "absolute")
+        .style("background-color", "rgba(0, 0, 0, 0.8)")
+        .style("color", "white")
+        .style("padding", "5px")
+        .style("border-radius", "5px")
+        .style("pointer-events", "none")
+        .style("opacity", 0);
+
+    // Carga los datos de AQI general por día
+    d3.csv("data/aqi_general_for_day.csv").then(function(aqiData) {
+        // Filtra los datos de AQI para la fecha seleccionada
+        var filteredData = aqiData.filter(function(d) {
+            return d.date === selectedDate;
+        });
+
+        // Crea un objeto para mapear AQI a colores
+        var aqiColorScale = d3.scaleOrdinal()
+            .domain([1, 2, 3, 4, 5, 6])
+            .range(["rgb(0, 128, 0)", "rgb(238, 176, 9)", "rgb(250, 145, 74)", 
+                    "rgb(255, 0, 0)", "rgb(128, 0, 128)", "rgb(165, 42, 42)"]);
+
+        var activeTooltip = null;
+        var activeStationId = null;
+
+        // ... (resto del código)
+
+        // Actualiza las formas en el mapa con los nuevos datos de AQI
+        g.selectAll(".station-shape")
+            .data(stationData)
+            .join("path")
+            .attr("class", "station-shape")
+            .attr("transform", function(d) {
+                return `translate(${projection([+d.longitude, +d.latitude])})`; // Transforma según la proyección
+            })
+            .attr("d", function(d) {
+                // Define diferentes formas según la nota
+                switch (d.Notes) {
+                    case "Urban":
+                        return d3.symbol().type(d3.symbolSquare)();
+                    case "Cross Reference":
+                        return d3.symbol().type(d3.symbolDiamond)();
+                    case "Rural":
+                        return d3.symbol().type(d3.symbolCircle)();
+                    case "Traffic":
+                        return d3.symbol().type(d3.symbolTriangle)();
+                    default:
+                        return d3.symbol().type(d3.symbolStar)();
+                }
+            })
+            .attr("fill", function(d) {
+                // Obtén el AQI para esta estación en la fecha seleccionada
+                var aqiValue = filteredData.find(function(aqi) {
+                    return aqi.stationId === d.stationId;
+                }).AQI_general;
+                // Devuelve el color correspondiente según el AQI
+                return aqiColorScale(aqiValue);
+            })
+            .attr("stroke", "#000")
+            .attr("stroke-width", 1)
+            .style("opacity", 0.8)
+            .on("mouseover", function(d) {
+                var stationId = d.stationId; // Obtén el station_id desde los datos
+                var formattedId = formatStationId(stationId);
+
+                // Muestra el tooltip
+                tooltip
+                    .style("left", (d3.event.pageX + 10) + "px")
+                    .style("top", (d3.event.pageY - 20) + "px")
+                    .style("opacity", 0.9)
+                    .html("Estación de AQ: " + formattedId + "<br/>" +
+                        "Área: " + d.Notes + "<br/>" +
+                        "AQI: " + filteredData.find(function(aqi) {
+                            return aqi.stationId === stationId;
+                        }).AQI_general);
+            })
+            .on("mouseout", function() {
+                // Oculta el tooltip al quitar el mouse si no está activo
+                if (!activeTooltip) {
+                    tooltip.style("opacity", 0);
+                }
+
+            })     
+
+            .on("click", function(d) {
+                var stationId = d.stationId;
+                console.log("Haz clic en la estación AQI:", stationId);
+
+                // Comprobar si el tooltip ya está activo para esta estación
+                if (activeStationId === stationId) {
+                    // Si es la misma estación, desactivar el tooltip
+                    if (activeTooltip) {
+                        activeTooltip.style("opacity", 0);
+                        activeTooltip = null;
+                    }
+                    activeStationId = null;
+                } else {
+                    // Si es una estación diferente o no hay tooltip activo, mostrar el tooltip
+                    var formattedId = formatStationId(stationId);
+                    if (activeTooltip) {
+                        activeTooltip.style("opacity", 0);
+                    }
+                    activeTooltip = tooltip
+                        .style("left", (d3.event.pageX + 10) + "px")
+                        .style("top", (d3.event.pageY - 20) + "px")
+                        .style("opacity", 0.9)
+                        .html("Estación de AQ: " + formattedId + "<br/>" +
+                                "Área: " + d.Notes + "<br/>" +
+                                "AQI: " + filteredData.find(function(aqi) {
+                                    return aqi.stationId === stationId;
+                                }).AQI_general);
+                    activeStationId = stationId;
+                }
+
+                updateChartsForStation(stationId); // Actualiza gráficos con la nueva estación
+                evolutionEspatialPCA_All(stationId, selectedDate);
+                updateComparisonChartSelection(stationId);
+            });
+
+    }).catch(function(error) {
+        console.log("Error al cargar los datos de AQI CSV:", error); // Maneja errores de carga de datos de AQI
+    });
+}
+
+
+function updateMapWithDateMeteorological(selectedDate) {
+    // Eliminar todas las flechas existentes antes de cargar las nuevas
+    g.selectAll(".wind-arrow-group").remove();
+
+    // Carga los datos de velocidad y dirección del viento por día
+    d3.csv("data/speed_wind_weather_for_day.csv").then(function(windData) {
+        // Filtra los datos de viento para la fecha seleccionada
+        var filteredWindData = windData.filter(function(d) {
+            return d.date === selectedDate;
+        });
+
+        // Escala para ajustar el tamaño de la flecha según la velocidad del viento
+        var windScale = d3.scaleLinear()
+            .domain([0, d3.max(filteredWindData, function(d) { return +d.wind_speed; })])
+            .range([5, 25]); // Rango de tamaños de flecha
+
+        // Crear un grupo para cada estación de monitoreo
+        var windArrows = g.selectAll(".wind-arrow-group")
+            .data(filteredWindData)
+            .join("g")
+            .attr("class", "wind-arrow-group")
+            .attr("transform", function(d) {
+                var coords = projection([+d.longitude, +d.latitude]);
+                return `translate(${coords[0]}, ${coords[1]}) rotate(${d.wind_direction})`;
+            });
+
+        // Añadir la línea de la flecha
+        windArrows.append("line")
+            .attr("class", "wind-arrow-line")
+            .attr("x1", 0)
+            .attr("y1", 0)
+            .attr("x2", 0)
+            .attr("y2", function(d) {
+                return -windScale(d.wind_speed); // Longitud de la línea escalada según la velocidad
+            })
+            .attr("stroke", "#ff0000")  // Color rojo
+            .attr("stroke-width", function(d) {
+                return windScale(d.wind_speed) / 5; // Ancho de la línea escalado
+            });
+            
+
+        // Añadir el triángulo de la punta de la flecha
+        windArrows.append("polygon")
+            .attr("class", "wind-arrow-head")
+            .attr("points", function(d) {
+                var headSize = windScale(d.wind_speed) + 2; // Tamaño de la cabeza escalado
+                return `0,-${headSize} 5,-${headSize - 5} -5,-${headSize - 5}`;
+            })
+            .attr("fill", "#ff0000");  // Color rojo
+            
+
+        // Eventos del mouse para mostrar el tooltip
+        windArrows
+            .on("mouseover", function(d) {
+                // Mostrar el tooltip con la dirección y velocidad del viento para ese día
+                d3.select("#tooltip")
+                    .style("left", (d3.pageX + 10) + "px")
+                    .style("top", (d3.pageY - 20) + "px")
+                    .style("opacity", 0.9)
+                    .html("Dirección del Viento: " + d.wind_direction + "°<br/>" +
+                            "Velocidad del Viento: " + d.wind_speed + " m/s" +"°<br/>" +
+                            "Clima: " + d.weather);
+            })
+            
+            .on("mouseout", function() {
+                // Ocultar el tooltip al quitar el mouse
+                d3.select("#tooltip").style("opacity", 0);
+            });
+    }).catch(function(error) {
+        console.log("Error al cargar los datos de viento CSV:", error); // Maneja errores de carga de datos de viento
+    });
+}
+
+    
+var toggle = true; // Variable para alternar entre los selectores
+
+function updateComparisonChartSelection(stationId) {
+    // Determinar cuál selector actualizar
+    var selectorId = toggle ? "#station" : "#station2";
+
+    // Actualizar el selector de estación correspondiente
+    var stationSelect = d3.select(selectorId);
+    stationSelect.property("value", stationId);
+
+    // Disparar el evento de cambio para actualizar el gráfico
+    stationSelect.dispatch("change");
+
+    // Alternar el valor de la variable toggle
+    toggle = !toggle;
+}
+    
+
+// Función para obtener una fecha aleatoria dentro del rango disponible en el dataset
+function getRandomDate(data) {
+    var dates = data.map(function(d) { return d.date; });
+    var randomDate = dates[Math.floor(Math.random() * dates.length)];
+    return randomDate;
+}
+function getMostPollutedDate(data) {
+    // Asumimos que el AQI más alto indica el día más contaminado
+    var mostPollutedDay = data.reduce((max, d) => (+d.AQI_general > +max.AQI_general) ? d : max);
+    return mostPollutedDay.date;
+}
+// Carga los datos de latitud y longitud de las estaciones de AQ
+d3.csv("data/lat_lon_beijijng_aq.csv").then(function(stationData) {
+    // Verifica que los datos se están cargando correctamente
+    console.log("Datos de estaciones cargados:", stationData);
+
+    // Carga los datos de AQI general por día
+    d3.csv("data/aqi_general_for_day.csv").then(function(aqiData) {
+        // Obtiene una fecha aleatoria del dataset de AQI al inicio
+        var randomDate = getRandomDate(aqiData);
+        console.log("Fecha aleatoria inicial seleccionada:", randomDate);
+
+        // Llama a la función para actualizar las formas con la fecha aleatoria inicial
+        updateMapWithDate(randomDate, stationData);
+        updateMapWithDateMeteorological(randomDate);
+        // Configuración del datepicker
+        $("#datepicker").datepicker({
+            dateFormat: "yy-mm-dd",
+            minDate: new Date("2017-01-01"),
+            maxDate: new Date("2018-01-31"),
+            onSelect: function(date) {
+                console.log("Fecha seleccionada:", date);
+                // Llama a la función para actualizar las formas con la nueva fecha seleccionada
+                updateMapWithDate(date, stationData);
+                updateMapWithDateMeteorological(date);
+            }
+        });
+
+    }).catch(function(error) {
+        console.log("Error al cargar los datos de AQI CSV:", error); // Maneja errores de carga de datos de AQI
+    });
+
+}).catch(function(error) {
+    console.log("Error al cargar los datos de estaciones CSV:", error); // Maneja errores de carga de datos de estaciones
+});
+
+// Cargar los datos de latitud y longitud de las estaciones de ME0
+d3.csv("data/lat_lon_beijijng_meo.csv").then(function(data) {
+    // Agregar las imágenes al mapa
+    g.selectAll(".data-image")
+        .data(data)
+        .enter()
+        .append("image")
+        .attr("class", "data-image")
+        .attr("x", function(d) {
+            // Proyectar la longitud en el sistema de coordenadas del mapa
+            return projection([+d.longitude, +d.latitude])[0] - 15; // Ajusta la posición en x para centrar la imagen
+        })
+        .attr("y", function(d) {
+            // Proyectar la latitud en el sistema de coordenadas del mapa
+            return projection([+d.longitude, +d.latitude])[1] - 15; // Ajusta la posición en y para centrar la imagen
+        })
+        .attr("station-label", function(d) {
+            return d.stationId; // Ajusta esto según tu estructura de datos
+        })
+        .attr("width", 20) // Ancho de la imagen
+        .attr("height", 20) // Altura de la imagen
+        .attr("xlink:href", "img/mark_meo.png") // Ruta a la imagen que deseas cargar
+        .on("mouseover", function(d) {
+            var stationId = d.stationId; // Obtener el station_id desde los datos
+            var formattedId = formatStationId(stationId);
+            d3.select(this)
+            .transition()
+            .attr("width", 30) // Cambiar el ancho al pasar el mouse
+            .attr("height", 30); // Cambiar la altura al pasar el mouse
+
+            // Mostrar el tooltip
+            d3.select("#tooltip")
+                .style("left", (d3.event.pageX + 10) + "px")
+                .style("top", (d3.event.pageY - 20) + "px")
+                .style("opacity", 0.9)
+                .html("Estación de Meo: " + formattedId);
+        })
+        .on("mouseout", function() {
+            // Ocultar el tooltip al quitar el mouse
+            d3.select("#tooltip").style("opacity", 0);
+            d3.select(this)
+            .transition()
+            .attr("width", 20) // Restaurar el ancho al quitar el mouse
+            .attr("height", 20);
+        })   
+        .on("click", function(d) {
+            var stationId = d.stationId;
+            var date = $("#datepicker").datepicker("getDate");
+            console.log("Haz clic en la imagen de la estación ME0:", stationId, "para la fecha:", date);
+            updateWeatherChartForStation(stationId); // Actualizar gráficos con la nueva estación
+
+        });
+        // updateMapWithDateMeteorological(date);
+});
+

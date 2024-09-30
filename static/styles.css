@@ -452,3 +452,14 @@ button:hover {
     z-index: 10; /* Asegura que el contenedor esté por encima de otros elementos */
     gap: 5px; /* Espacio entre los elementos de texto */
 }
+
+
+
+.tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px;
+    border-radius: 5px;
+    pointer-events: none;
+  }
