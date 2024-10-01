@@ -116,15 +116,25 @@
         <!-- PARA EL MAPA DE BEINNIGN -->
         <div class="chart-container-map">
             <div class="chart-header-map">
-                <h2>Mapa Geografico de Beijing</h2>
-
+                <h2>Mapa Geográfico de Beijing</h2>
             </div>
-            <div id="date-selector">
-                <label for="datepicker">Selecciona una fecha:</label>
-                <input type="text" id="datepicker">
+        
+            <div id="map"></div>
+            
+            <div id="legend-map" class="legend-map">
+                <ul>
+                    <li><span class="square"></span>  Urban</li>
+                    <li><span class="triangle"></span> Tráfico</li>
+                    <li><span class="diamond"></span>  Cross Reference</li>
+                    <li><span class="circle"></span> Rural</li>
+                    <li>
+                        <img src="img/mark_meo.png" alt="Estación Meteorológica" style="width: 15px; height: 16px; margin-right: 10px;">
+                        Meteorológica
+                    </li>
+                                    </ul>
             </div>
-            <div id="map"></div>           
         </div>
+        
         
         <div class="chart-container-tree-rad">
             <div class="chart-header-tree-rad">
@@ -212,6 +222,12 @@
     </div>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/material-ui/5.2.5/material-ui.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <script src="static/script.js"></script>
 
     <script>

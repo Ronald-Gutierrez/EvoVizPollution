@@ -60,13 +60,13 @@
     <label for="date">Seleccione Fecha:</label>
     <input type="date" id="date">
 
-    <label for="width">Ancho del gráfico:</label>
-    <input type="range" id="width" min="300" max="1200" value="600"> <!-- Slider para el ancho -->
-    <span id="widthValue">600</span> <!-- Mostrar valor actual del ancho -->
+    <!-- <label for="width">Ancho del gráfico:</label> -->
+    <!-- <input type="range" id="width" min="300" max="1200" value="600"> Slider para el ancho
+    <span id="widthValue">600</span> Mostrar valor actual del ancho
     
     <label for="height">Altura del gráfico:</label>
-    <input type="range" id="height" min="50" max="600" value="220"> <!-- Slider para la altura -->
-    <span id="heightValue">220</span> <!-- Mostrar valor actual de la altura -->
+    <input type="range" id="height" min="50" max="600" value="50">
+    <!-- <span id="heightValue">250</span> Mostrar valor actual de la altura -->
 
     <button id="update">Actualizar Gráficos</button>
 
@@ -116,8 +116,8 @@
         function updateCharts() {
             const selectedStation = document.getElementById("stationId").value;
             const selectedDate = document.getElementById("date").value;
-            const width = +document.getElementById("width").value; // Ancho del gráfico
-            const height = +document.getElementById("height").value; // Altura del gráfico
+            const width = 600
+            const height = 50
             
             drawCharts(selectedStation, selectedDate, width, height);
         }

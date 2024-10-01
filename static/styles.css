@@ -101,7 +101,7 @@ p {
 .chart-container-pca {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
     top: 20px; /* Espaciado desde el borde superior */
-    left: 295px; /* Espaciado desde el borde izquierdo */
+    left: 835px; /* Espaciado desde el borde izquierdo */
     width: 27vw; /* Ancho de la ventana de visualización */
     height: 46vh; /* Alto de la ventana de visualización */
     border: 1px solid #ccc; /* Borde de la ventana */
@@ -125,7 +125,7 @@ p {
 .chart-container-map {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
     top: 20px; /* Espaciado desde el borde superior */
-    left: 1375px; /* Espaciado desde el borde izquierdo */
+    left: 295px; /* Espaciado desde el borde izquierdo */
     width: 27vw; /* Ancho de la ventana de visualización */
     height: 46vh; /* Alto de la ventana de visualización */
     border: 1px solid #ccc; /* Borde de la ventana */
@@ -172,7 +172,7 @@ p {
 .chart-container-tree-rad {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
     top: 20px; /* Espaciado desde el borde superior */
-    left: 835px; /* Espaciado desde el borde izquierdo */
+    left: 1375px; /* Espaciado desde el borde izquierdo */
     width: 27vw; /* Ancho de la ventana de visualización */
     height: 46vh; /* Alto de la ventana de visualización */
     border: 1px solid #ccc; /* Borde de la ventana */
@@ -463,3 +463,64 @@ button:hover {
     border-radius: 5px;
     pointer-events: none;
   }
+
+
+
+  .legend-map {
+    position: absolute;
+    top: 60px; /* Ajusta la posición inferior del encabezado */
+    left: 10px; /* Al lado izquierdo */
+    background-color: rgba(255, 255, 255, 0.8); /* Fondo semi-transparente */
+    padding: 10px;
+    border-radius: 5px; /* Bordes redondeados */
+}
+
+.legend-map ul {
+    list-style-type: none; /* Elimina las viñetas de la lista */
+    padding: 0; /* Elimina el relleno */
+    margin: 0; /* Elimina el margen */
+}
+
+.legend-map li {
+    display: flex; /* Utiliza flexbox para alinear el texto y la figura */
+    align-items: center; /* Centra verticalmente */
+    margin-bottom: 5px; /* Espaciado entre elementos */
+}
+
+.square, .triangle, .diamond, .circle {
+    width: 15px; /* Tamaño de las figuras */
+    height: 15px; /* Tamaño de las figuras */
+    margin-right: 10px; /* Espaciado entre figura y texto */
+}
+
+.square {
+    background-color: rgb(165, 163, 163); /* Cambia el color según sea necesario */
+
+}
+
+.triangle {
+    width: 0;
+    height: 0;
+    border-left: 7.5px solid transparent; /* Bordes del triángulo */
+    border-right: 7.5px solid transparent; /* Bordes del triángulo */
+    border-bottom: 15px solid rgb(165, 163, 163); /* Color del triángulo */
+    position: relative;
+}
+
+
+
+.diamond::before {
+    content: '';
+    position: absolute;
+    top: 53.5px;
+    left: 9.5px;
+    width: 13px;
+    height: 13px;
+    background-color: rgb(165, 163, 163); /* Cambia el color según sea necesario */
+    transform: rotate(45deg); /* Rota para formar un diamante */
+}
+
+.circle {
+    border-radius: 50%; /* Redondea para hacer un círculo */
+    background-color: rgb(165, 163, 163); /* Cambia el color según sea necesario */
+}

@@ -887,9 +887,22 @@ function addSeasonalBackground(svg, xScale, height, margin) {
 //=======================================================================================================
 // VIZUALIZACION DE MAPA
 //
+
+function formatStationId(stationId) {
+    if (!stationId) {
+        console.error("stationId es undefined o null");
+        return ""; // O devuelve un valor predeterminado
+    }
+    
+    var formattedId = stationId.charAt(0).toUpperCase() + stationId.slice(1);
+    formattedId = formattedId.replace("_aq", "");
+    formattedId = formattedId.replace("_meo", "");
+
+    return formattedId;
+}
 // Define las dimensiones del mapa
-const width_MAP = 800;
-const height_MAP = 1100;
+const width_MAP = 1100;
+const height_MAP = 800;
 
 // Crea un elemento SVG para contener el mapa
 const svg = d3.select("#map").append("svg")
@@ -911,7 +924,7 @@ svg.call(zoom);
 const projection = d3.geoMercator()
     .center([116.4074, 39.9042]) // Centra el mapa en Beijing
     .scale(10000) // Ajusta la escala para que quepa en el tamaño del mapa
-    .translate([width_MAP / 4.5, height_MAP / 4]);
+    .translate([width_MAP / 4, height_MAP / 3]);
 
 // Define el generador de ruta para convertir rutas GeoJSON a rutas SVG
 const path = d3.geoPath().projection(projection);
@@ -924,17 +937,17 @@ d3.json("map/beijing.json")
             .data(data.features)
             .enter().append("path")
             .attr("d", path)
-            .attr("fill", "#c6dbef")
+            .attr("fill", "#f8f5e6")
             .attr("stroke", "#000")
             .attr("stroke-width", 1)
             .on("mouseover", function(event, d) {
                 d3.select(this)
-                    .attr("fill", "#9ecae1")
+                    .attr("fill", "#d3d3d3")
                     .attr("stroke-width", 2);
             })
             .on("mouseout", function(event, d) {
                 d3.select(this)
-                    .attr("fill", "#c6dbef")
+                    .attr("fill", "#f8f5e6")
                     .attr("stroke-width", 1);
             });
     })
@@ -1058,9 +1071,6 @@ function updateMapWithDate(selectedDate, stationData) {
                     activeStationId = stationId;
                 }
 
-                updateChartsForStation(stationId); // Actualiza gráficos con la nueva estación
-                evolutionEspatialPCA_All(stationId, selectedDate);
-                updateComparisonChartSelection(stationId);
             });
 
     }).catch(function(error) {
@@ -1069,96 +1079,96 @@ function updateMapWithDate(selectedDate, stationData) {
 }
 
 
-function updateMapWithDateMeteorological(selectedDate) {
-    // Eliminar todas las flechas existentes antes de cargar las nuevas
-    g.selectAll(".wind-arrow-group").remove();
+// function updateMapWithDateMeteorological(selectedDate) {
+//     // Eliminar todas las flechas existentes antes de cargar las nuevas
+//     g.selectAll(".wind-arrow-group").remove();
 
-    // Carga los datos de velocidad y dirección del viento por día
-    d3.csv("data/speed_wind_weather_for_day.csv").then(function(windData) {
-        // Filtra los datos de viento para la fecha seleccionada
-        var filteredWindData = windData.filter(function(d) {
-            return d.date === selectedDate;
-        });
+//     // Carga los datos de velocidad y dirección del viento por día
+//     d3.csv("data/speed_wind_weather_for_day.csv").then(function(windData) {
+//         // Filtra los datos de viento para la fecha seleccionada
+//         var filteredWindData = windData.filter(function(d) {
+//             return d.date === selectedDate;
+//         });
 
-        // Escala para ajustar el tamaño de la flecha según la velocidad del viento
-        var windScale = d3.scaleLinear()
-            .domain([0, d3.max(filteredWindData, function(d) { return +d.wind_speed; })])
-            .range([5, 25]); // Rango de tamaños de flecha
+//         // Escala para ajustar el tamaño de la flecha según la velocidad del viento
+//         var windScale = d3.scaleLinear()
+//             .domain([0, d3.max(filteredWindData, function(d) { return +d.wind_speed; })])
+//             .range([5, 25]); // Rango de tamaños de flecha
 
-        // Crear un grupo para cada estación de monitoreo
-        var windArrows = g.selectAll(".wind-arrow-group")
-            .data(filteredWindData)
-            .join("g")
-            .attr("class", "wind-arrow-group")
-            .attr("transform", function(d) {
-                var coords = projection([+d.longitude, +d.latitude]);
-                return `translate(${coords[0]}, ${coords[1]}) rotate(${d.wind_direction})`;
-            });
+//         // Crear un grupo para cada estación de monitoreo
+//         var windArrows = g.selectAll(".wind-arrow-group")
+//             .data(filteredWindData)
+//             .join("g")
+//             .attr("class", "wind-arrow-group")
+//             .attr("transform", function(d) {
+//                 var coords = projection([+d.longitude, +d.latitude]);
+//                 return `translate(${coords[0]}, ${coords[1]}) rotate(${d.wind_direction})`;
+//             });
 
-        // Añadir la línea de la flecha
-        windArrows.append("line")
-            .attr("class", "wind-arrow-line")
-            .attr("x1", 0)
-            .attr("y1", 0)
-            .attr("x2", 0)
-            .attr("y2", function(d) {
-                return -windScale(d.wind_speed); // Longitud de la línea escalada según la velocidad
-            })
-            .attr("stroke", "#ff0000")  // Color rojo
-            .attr("stroke-width", function(d) {
-                return windScale(d.wind_speed) / 5; // Ancho de la línea escalado
-            });
+//         // Añadir la línea de la flecha
+//         windArrows.append("line")
+//             .attr("class", "wind-arrow-line")
+//             .attr("x1", 0)
+//             .attr("y1", 0)
+//             .attr("x2", 0)
+//             .attr("y2", function(d) {
+//                 return -windScale(d.wind_speed); // Longitud de la línea escalada según la velocidad
+//             })
+//             .attr("stroke", "#ff0000")  // Color rojo
+//             .attr("stroke-width", function(d) {
+//                 return windScale(d.wind_speed) / 5; // Ancho de la línea escalado
+//             });
             
 
-        // Añadir el triángulo de la punta de la flecha
-        windArrows.append("polygon")
-            .attr("class", "wind-arrow-head")
-            .attr("points", function(d) {
-                var headSize = windScale(d.wind_speed) + 2; // Tamaño de la cabeza escalado
-                return `0,-${headSize} 5,-${headSize - 5} -5,-${headSize - 5}`;
-            })
-            .attr("fill", "#ff0000");  // Color rojo
+//         // Añadir el triángulo de la punta de la flecha
+//         windArrows.append("polygon")
+//             .attr("class", "wind-arrow-head")
+//             .attr("points", function(d) {
+//                 var headSize = windScale(d.wind_speed) + 2; // Tamaño de la cabeza escalado
+//                 return `0,-${headSize} 5,-${headSize - 5} -5,-${headSize - 5}`;
+//             })
+//             .attr("fill", "#ff0000");  // Color rojo
             
 
-        // Eventos del mouse para mostrar el tooltip
-        windArrows
-            .on("mouseover", function(d) {
-                // Mostrar el tooltip con la dirección y velocidad del viento para ese día
-                d3.select("#tooltip")
-                    .style("left", (d3.pageX + 10) + "px")
-                    .style("top", (d3.pageY - 20) + "px")
-                    .style("opacity", 0.9)
-                    .html("Dirección del Viento: " + d.wind_direction + "°<br/>" +
-                            "Velocidad del Viento: " + d.wind_speed + " m/s" +"°<br/>" +
-                            "Clima: " + d.weather);
-            })
+//         // Eventos del mouse para mostrar el tooltip
+//         windArrows
+//             .on("mouseover", function(d) {
+//                 // Mostrar el tooltip con la dirección y velocidad del viento para ese día
+//                 d3.select("#tooltip")
+//                     .style("left", (d3.pageX + 10) + "px")
+//                     .style("top", (d3.pageY - 20) + "px")
+//                     .style("opacity", 0.9)
+//                     .html("Dirección del Viento: " + d.wind_direction + "°<br/>" +
+//                             "Velocidad del Viento: " + d.wind_speed + " m/s" +"°<br/>" +
+//                             "Clima: " + d.weather);
+//             })
             
-            .on("mouseout", function() {
-                // Ocultar el tooltip al quitar el mouse
-                d3.select("#tooltip").style("opacity", 0);
-            });
-    }).catch(function(error) {
-        console.log("Error al cargar los datos de viento CSV:", error); // Maneja errores de carga de datos de viento
-    });
-}
+//             .on("mouseout", function() {
+//                 // Ocultar el tooltip al quitar el mouse
+//                 d3.select("#tooltip").style("opacity", 0);
+//             });
+//     }).catch(function(error) {
+//         console.log("Error al cargar los datos de viento CSV:", error); // Maneja errores de carga de datos de viento
+//     });
+// }
 
     
 var toggle = true; // Variable para alternar entre los selectores
 
-function updateComparisonChartSelection(stationId) {
-    // Determinar cuál selector actualizar
-    var selectorId = toggle ? "#station" : "#station2";
+// function updateComparisonChartSelection(stationId) {
+//     // Determinar cuál selector actualizar
+//     var selectorId = toggle ? "#station" : "#station2";
 
-    // Actualizar el selector de estación correspondiente
-    var stationSelect = d3.select(selectorId);
-    stationSelect.property("value", stationId);
+//     // Actualizar el selector de estación correspondiente
+//     var stationSelect = d3.select(selectorId);
+//     stationSelect.property("value", stationId);
 
-    // Disparar el evento de cambio para actualizar el gráfico
-    stationSelect.dispatch("change");
+//     // Disparar el evento de cambio para actualizar el gráfico
+//     stationSelect.dispatch("change");
 
-    // Alternar el valor de la variable toggle
-    toggle = !toggle;
-}
+//     // Alternar el valor de la variable toggle
+//     toggle = !toggle;
+// }
     
 
 // Función para obtener una fecha aleatoria dentro del rango disponible en el dataset
@@ -1256,7 +1266,7 @@ d3.csv("data/lat_lon_beijijng_meo.csv").then(function(data) {
             var stationId = d.stationId;
             var date = $("#datepicker").datepicker("getDate");
             console.log("Haz clic en la imagen de la estación ME0:", stationId, "para la fecha:", date);
-            updateWeatherChartForStation(stationId); // Actualizar gráficos con la nueva estación
+            // updateWeatherChartForStation(stationId); // Actualizar gráficos con la nueva estación
 
         });
         // updateMapWithDateMeteorological(date);
