@@ -160,14 +160,6 @@ p {
     flex-direction: column; /* Coloca el título encima del gráfico */
     z-index: 1; /* Asegura que el contenedor esté sobre otros elementos */
 }
-.chart-header-compare {
-    background-color: #d3cfcf; /* Fondo del encabezado */
-    color: #000000; /* Color del texto del encabezado */
-    padding: 1px; /* Espaciado dentro del encabezado */
-    border-bottom: 1px solid #ffffff; /* Línea divisoria debajo del encabezado */
-    text-align: center; /* Centra el texto del encabezado */
-    height: 50px;
-}
 
 .chart-container-tree-rad {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
@@ -199,7 +191,7 @@ p {
     position: absolute; /* Posiciona el contenedor de manera absoluta */
     top: 470px; /* Espaciado desde el borde superior */
     left: 295px; /* Espaciado desde el borde izquierdo */
-    width: 53vw; /* Ancho de la ventana de visualización */
+    width: 82vw; /* Ancho de la ventana de visualización */
     height: 46vh; /* Alto de la ventana de visualización */
     border: 1px solid #ccc; /* Borde de la ventana */
     border-radius: 10px; /* Bordes redondeados */

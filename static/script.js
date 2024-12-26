@@ -581,7 +581,7 @@ function updateTimeSeriesChart(matrixCorrelaction, fecha_selected, contaminate) 
         // Limpia el gráfico anterior
         timeTemporalDiv.selectAll('*').remove();
 
-        const width = 1020; // Ancho del gráfico
+        const width = 1520; // Ancho del gráfico
         const height = 330; // Alto del gráfico
         const margin = { top: 20, right: 30, bottom: 30, left: 50 };
 
